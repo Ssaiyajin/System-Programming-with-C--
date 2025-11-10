@@ -1,0 +1,5 @@
+add_library(sort_pointers_core SortPointers.cpp)
+target_include_directories(sort_pointers_core PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_clang_tidy_target(lint_sort_pointers_core SortPointers.cpp)
+add_dependencies(lint lint_sort_pointers_core)

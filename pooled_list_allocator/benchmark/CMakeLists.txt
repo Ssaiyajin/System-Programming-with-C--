@@ -1,0 +1,2 @@
+add_executable(allocator_benchmark main.cpp)
+target_link_libraries(allocator_benchmark PUBLIC allocator_list_core)

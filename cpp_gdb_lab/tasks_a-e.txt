@@ -1,0 +1,89 @@
+########################
+# Solution to task (a) #
+########################
+
+g++ -std=c++20 -O0 -g -o program program.cpp
+
+
+
+########################
+# Solution to task (b) #
+########################
+
+First install gdb by running "apt install gdb " and the "gdb ./program" and then putting a break point by " break main" which will give an output as "Breakpoint 1 at 0x12a7: file program.cpp, line 28."
+if the "run" command is issued it will break at line 28 because of previous break command 
+(gdb) run
+Starting program: /root/C++/sheet02/exercise4/program
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Breakpoint 1, main () at program.cpp:28
+28      int main() {
+
+1.  for getting info about Current breakpoints run the command " info breakpoints" which will give the following output:
+Num     Type           Disp Enb Address            What
+1       breakpoint     keep y   0x00005555555552a7 in main() at program.cpp:28
+        breakpoint already hit 1 time
+
+2.  for getting info about local variables in the main () function run the Command "info locals" which will give the following output:
+a = 32767
+b = 4160432448
+c = 32767
+
+3.for getting info about threads that are currently running, run the Command "info threads" which will give the following output:
+  Id   Target Id                                  Frame
+* 1    Thread 0x7ffff7a5a3c0 (LWP 1261) "program" main () at program.cpp:28
+
+4.for getting info about current value of the instruction pointer register (rip on X86) run the Command "info registers rip" which will give the following output:
+
+rip            0x5555555552a7      0x5555555552a7 <main()+12>
+
+
+########################
+# Solution to task (c) #
+########################
+
+
+
+1. To print all function argument run the command  "info args"  which will give the following output
+a = 1000
+b = 1000
+
+2. To continue execution up to next line run the command "continue" which will give the following output:
+Continuing.
+
+Breakpoint 1, (anonymous namespace)::foo (a=1000, b=2000) at program.cpp:6
+6           unsigned c = a ^ b;
+
+3. To continue execution until line 11 run the command "until 11" which will give the following output:
+(anonymous namespace)::foo (a=1000, b=2000) at program.cpp:11
+11              d = c & d;
+
+4. To print the value of e run the command " print e" which will give the following output:
+$1 = 952
+
+5. TO continue the execution until the function returns run the command " finish" which will give the following output:
+Run till exit from #0  (anonymous namespace)::foo (a=1000, b=2000) at program.cpp:11
+(anonymous namespace)::bar (a=1000, b=3) at program.cpp:23
+23              return foo(a, bar(a, b - 1));
+Value returned is $2 = 3000
+
+
+
+
+
+########################
+# Solution to task (d) #
+########################
+
+to set a break point run the program and  say "break main" call the function foo by running the command  "call foo(12, 34)" which will calculate a+b which is 46 for the 2 input variables 12  and 34.
+
+########################
+# Solution to task (e) #
+########################
+
+1. The combination of input can be Division by 0 "first = 57, second = 0", stack overflow "first = 57, second = 1000000" or invalid inputs "first = abc , second = 75" The Command "bt" will make zou to view the stack trace:
+#0  0x0000555555555285 in (anonymous namespace)::bar (a=57, b=9737977) at program.cpp:23
+#1  0x000055555555528a in (anonymous namespace)::bar (a=57, b=9737978) at program.cpp:23
+The program crashed because the value of b went out of bounds of unsigned integer.
+

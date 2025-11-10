@@ -1,0 +1,5 @@
+add_library(object_representation_core ObjectRepresentation.cpp)
+target_include_directories(object_representation_core PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_clang_tidy_target(lint_object_representation_core ObjectRepresentation.cpp)
+add_dependencies(lint lint_object_representation_core)

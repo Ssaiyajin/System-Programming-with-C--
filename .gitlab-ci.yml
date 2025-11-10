@@ -1,0 +1,228 @@
+simplevm:
+  script:
+    - mkdir ci_simplevm
+    - cd ci_simplevm
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../simple_vm
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_simplevm:
+  script:
+    - mkdir ci_lint_simplevm
+    - cd ci_lint_simplevm
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../simple_vm
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+binary_heap:
+  script:
+    - mkdir ci_build_binary_heap
+    - cd ci_build_binary_heap
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../binary_max_heap
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_binary_heap:
+  script:
+    - mkdir ci_lint_binary_heap
+    - cd ci_lint_binary_heap
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../binary_max_heap
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+sort_pointers:
+  script:
+    - mkdir ci_build_sort_pointers
+    - cd ci_build_sort_pointers
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../indirect_sorting
+
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_sort_pointers:
+  script:
+    - mkdir ci_lint_sort_pointers
+    - cd ci_lint_sort_pointers
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../indirect_sorting
+
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+object_representation:
+  script:
+    - mkdir ci_build_object_representation
+    - cd ci_build_object_representation
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../indirect_sorting
+
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_object_representation:
+  script:
+    - mkdir ci_lint_object_representation
+    - cd ci_lint_object_representation
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../indirect_sorting
+
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+arithmetic_types:
+  script:
+    - mkdir ci_build_arithmetic_types
+    - cd ci_build_arithmetic_types
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../arithmetic_types
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_arithmetic_types:
+  script:
+    - mkdir ci_lint_arithmetic_types
+    - cd ci_lint_arithmetic_types
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../arithmetic_types
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+  allow_failure: true
+
+bitset:
+  script:
+    - mkdir ci_build_bitset
+    - cd ci_build_bitset
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../bitset_container
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_bitset:
+  script:
+    - mkdir ci_lint_bitset
+    - cd ci_lint_bitset
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../bitset_container
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+  allow_failure: true
+
+  chaining_ht:
+  script:
+    - mkdir ci_build_chaining_ht
+    - cd ci_build_chaining_ht
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../chaining_hash_table
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_chaining_ht:
+  script:
+    - mkdir ci_lint_chaining_ht
+    - cd ci_lint_chaining_ht
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../chaining_hash_table
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+raii:
+  script:
+    - mkdir ci_build_raii
+    - cd ci_build_raii
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../raii_temp_files
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_raii:
+  script:
+    - mkdir ci_lint_raii
+    - cd ci_lint_raii
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../raii_temp_files
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+ast:
+  script:
+    - mkdir ci_ast
+    - cd ci_ast
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../arithmetic_ast
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_ast:
+  script:
+    - mkdir ci_lint_ast
+    - cd ci_lint_ast
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../arithmetic_ast
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+allocator_list:
+  script:
+    - mkdir ci_allocator_list
+    - cd ci_allocator_list
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../pooled_list_allocator
+    - make
+    - ./test/tester_a
+    - ./test/tester_b
+    - ./test/tester_c
+    - ./test/tester_d
+  tags:
+    - cmake
+
+lint_allocator_list:
+  script:
+    - mkdir ci_lint_allocator_list
+    - cd ci_lint_allocator_list
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../pooled_list_allocator
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy
+
+parallel_ht:
+  script:
+    - mkdir ci_parallel_ht
+    - cd ci_parallel_ht
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../thread_safe_multimap
+    - make
+    - ./test/tester
+  tags:
+    - cmake
+
+lint_parallel_ht:
+  script:
+    - mkdir ci_lint_parallel_ht
+    - cd ci_lint_parallel_ht
+    - cmake -DCMAKE_BUILD_TYPE=Debug ../thread_safe_multimap
+    - make lint
+  tags:
+    - cmake
+    - clang-tidy

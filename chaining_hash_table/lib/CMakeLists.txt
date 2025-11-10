@@ -1,0 +1,5 @@
+add_library(chaining_ht_core GenericValue.cpp ChainingHashTable.cpp)
+target_include_directories(chaining_ht_core PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_clang_tidy_target(lint_chaining_ht_core ChainingHashTable.cpp)
+add_dependencies(lint lint_chaining_ht_core)
