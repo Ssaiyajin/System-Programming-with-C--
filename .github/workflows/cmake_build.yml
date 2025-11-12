@@ -1,0 +1,87 @@
+name: CMake Build and Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - simple_vm
+          - binary_max_heap
+          - indirect_sorting
+          - arithmetic_types
+          - bitset_container
+          - chaining_hash_table
+          - raii_temp_files
+          - arithmetic_ast
+          - pooled_list_allocator
+          - thread_safe_multimap
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake clang-tidy make g++
+
+      - name: Configure CMake
+        run: |
+          mkdir -p build_${{ matrix.project }}
+          cd build_${{ matrix.project }}
+          cmake -DCMAKE_BUILD_TYPE=Debug ../${{ matrix.project }}
+
+      - name: Build project
+        run: |
+          cd build_${{ matrix.project }}
+          make
+
+      - name: Run tests
+        run: |
+          cd build_${{ matrix.project }}
+          if [ -f "./test/tester" ]; then ./test/tester; fi
+          if [ -f "./test/tester_a" ]; then ./test/tester_a; fi
+          if [ -f "./test/tester_b" ]; then ./test/tester_b; fi
+          if [ -f "./test/tester_c" ]; then ./test/tester_c; fi
+          if [ -f "./test/tester_d" ]; then ./test/tester_d; fi
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - simple_vm
+          - binary_max_heap
+          - indirect_sorting
+          - arithmetic_types
+          - bitset_container
+          - chaining_hash_table
+          - raii_temp_files
+          - arithmetic_ast
+          - pooled_list_allocator
+          - thread_safe_multimap
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake clang-tidy make g++
+
+      - name: Configure for lint
+        run: |
+          mkdir -p lint_${{ matrix.project }}
+          cd lint_${{ matrix.project }}
+          cmake -DCMAKE_BUILD_TYPE=Debug ../${{ matrix.project }}
+
+      - name: Run clang-tidy lint
+        run: |
+          cd lint_${{ matrix.project }}
+          make lint || true
