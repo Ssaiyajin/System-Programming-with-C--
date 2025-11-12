@@ -39,7 +39,7 @@ jobs:
       - name: Build project
         run: |
           cd build_${{ matrix.project }}
-          make
+          make -j$(nproc)
 
       - name: Run tests
         run: |
@@ -51,6 +51,7 @@ jobs:
           if [ -f "./test/tester_d" ]; then ./test/tester_d; fi
 
   lint:
+    needs: build   # 👈 ensures lint runs only after ALL builds finish successfully
     runs-on: ubuntu-latest
     strategy:
       matrix:
