@@ -1,12 +1,5 @@
 #ifndef H_lib_PooledAllocator
 #define H_lib_PooledAllocator
-//---------------------------------------------------------------------------
-// Minimal pooled allocator implementation used by the tests.
-// - allocate() default-constructs one T and returns T*
-// - deallocate(T*) destroys the object and returns the slot to a free-list
-// - Moveable, non-copyable
-// - Allocates memory in blocks for contiguous allocations
-//---------------------------------------------------------------------------
 
 #include <cstdlib>
 #include <cstddef>
@@ -22,16 +15,21 @@ class PooledAllocator {
 public:
     using value_type = T;
     using pointer = T*;
+    using const_pointer = const T*;
     using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+
+    template<typename U>
+    struct rebind { using other = PooledAllocator<U>; };
 
     PooledAllocator() noexcept : head_(nullptr), initial_capacity_(8) {}
-
-    // disable copy; enable move
+    
+    // Disable copy; enable move
     PooledAllocator(const PooledAllocator&) = delete;
     PooledAllocator& operator=(const PooledAllocator&) = delete;
 
     PooledAllocator(PooledAllocator&& other) noexcept
-      : head_(other.head_), initial_capacity_(other.initial_capacity_) {
+        : head_(other.head_), initial_capacity_(other.initial_capacity_) {
         other.head_ = nullptr;
     }
 
@@ -45,15 +43,38 @@ public:
         return *this;
     }
 
-    template<typename U>
-    struct rebind { using other = PooledAllocator<U>; };
-
     ~PooledAllocator() noexcept {
         release_all();
     }
 
-    // allocate storage for one T (uninitialized)
-    T* allocate() {
+    // ===== STL-compliant interface =====
+    T* allocate(size_type n) {
+        if (n == 0) return nullptr;
+        if (n != 1) {
+            // optional: only support single-object allocations for simplicity
+            throw std::bad_alloc();
+        }
+        return allocate_single();
+    }
+
+    void deallocate(pointer p, size_type n) noexcept {
+        if (n == 1) deallocate_single(p);
+    }
+
+    bool operator==(const PooledAllocator&) const noexcept { return true; }
+    bool operator!=(const PooledAllocator&) const noexcept { return false; }
+
+private:
+    struct Chunk {
+        Chunk* next;
+        std::size_t capacity;
+        std::size_t used;
+    };
+
+    Chunk* head_;
+    std::size_t initial_capacity_;
+
+    T* allocate_single() {
         if (!head_ || head_->used >= head_->capacity) {
             allocate_chunk(next_capacity());
         }
@@ -63,27 +84,14 @@ public:
         return result;
     }
 
-    // deallocate only if pointer is last allocated in most recent chunk
-    void deallocate(T* p) noexcept {
-        if (!p || !head_) return;
-        if (head_->used == 0) return;
+    void deallocate_single(T* p) noexcept {
+        if (!p || !head_ || head_->used == 0) return;
         unsigned char* data = reinterpret_cast<unsigned char*>(head_ + 1);
         unsigned char* last_addr = data + (head_->used - 1) * sizeof(T);
         if (reinterpret_cast<unsigned char*>(p) == last_addr) {
             head_->used -= 1; // reclaim last slot
         }
     }
-
-private:
-    struct Chunk {
-        Chunk* next;
-        std::size_t capacity;
-        std::size_t used;
-        // flexible array of data follows
-    };
-
-    Chunk* head_;
-    std::size_t initial_capacity_;
 
     std::size_t next_capacity() const noexcept {
         return head_ ? head_->capacity * 2 : initial_capacity_;
@@ -104,7 +112,7 @@ private:
         Chunk* cur = head_;
         while (cur) {
             Chunk* next = cur->next;
-            std::free(reinterpret_cast<void*>(cur));
+            std::free(cur);
             cur = next;
         }
         head_ = nullptr;
@@ -113,4 +121,4 @@ private:
 
 } // namespace pool
 
-#endif // POOL_POOLED_ALLOCATOR_HPP
+#endif // H_lib_PooledAllocator
