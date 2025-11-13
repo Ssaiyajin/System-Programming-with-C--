@@ -9,7 +9,7 @@ using namespace pool;
 using namespace std;
 //---------------------------------------------------------------------------
 TEST(TestPooledAllocator, Concept) {
-    struct Foo {refactor the entire code and make it working
+    struct Foo {
         Foo(const Foo&) = delete;
         Foo(Foo&&) = delete;
         Foo& operator=(const Foo&) = delete;
