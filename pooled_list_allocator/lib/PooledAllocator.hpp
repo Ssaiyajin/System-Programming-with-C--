@@ -21,15 +21,15 @@ template<typename T>
 class PooledAllocator {
 public:
     using value_type = T;
+    using pointer = T*;
+    using size_type = std::size_t;
 
-    PooledAllocator() noexcept
-      : head_(nullptr), initial_capacity_(8) {}
+    PooledAllocator() noexcept : head_(nullptr), initial_capacity_(8) {}
 
-    // disallow copy (cheap move only)
+    // disable copy; enable move
     PooledAllocator(const PooledAllocator&) = delete;
     PooledAllocator& operator=(const PooledAllocator&) = delete;
 
-    // move
     PooledAllocator(PooledAllocator&& other) noexcept
       : head_(other.head_), initial_capacity_(other.initial_capacity_) {
         other.head_ = nullptr;
@@ -63,15 +63,14 @@ public:
         return result;
     }
 
-    // deallocate only if this pointer is the last allocated in the most recent chunk
+    // deallocate only if pointer is last allocated in most recent chunk
     void deallocate(T* p) noexcept {
         if (!p || !head_) return;
-        unsigned char* data = reinterpret_cast<unsigned char*>(head_ + 1);
         if (head_->used == 0) return;
+        unsigned char* data = reinterpret_cast<unsigned char*>(head_ + 1);
         unsigned char* last_addr = data + (head_->used - 1) * sizeof(T);
         if (reinterpret_cast<unsigned char*>(p) == last_addr) {
-            // pop
-            head_->used -= 1;
+            head_->used -= 1; // reclaim last slot
         }
     }
 
@@ -80,18 +79,17 @@ private:
         Chunk* next;
         std::size_t capacity;
         std::size_t used;
-        // data follows
+        // flexible array of data follows
     };
 
     Chunk* head_;
     std::size_t initial_capacity_;
 
     std::size_t next_capacity() const noexcept {
-        return head_ ? (head_->capacity * 2) : initial_capacity_;
+        return head_ ? head_->capacity * 2 : initial_capacity_;
     }
 
     void allocate_chunk(std::size_t capacity) {
-        // allocate: sizeof(Chunk) + capacity * sizeof(T)
         std::size_t bytes = sizeof(Chunk) + capacity * sizeof(T);
         void* mem = std::malloc(bytes);
         if (!mem) throw std::bad_alloc();
@@ -115,4 +113,4 @@ private:
 
 } // namespace pool
 
-#endif
+#endif // POOL_POOLED_ALLOCATOR_HPP

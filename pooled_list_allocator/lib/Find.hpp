@@ -4,12 +4,11 @@
 #include <concepts>
 #include <iterator>
 #include <type_traits>
-#include <cstddef>
 #include <utility>
 
 namespace pool {
 
-// generic find for container types exposing value_type and supporting std::begin/std::end
+// find for containers exposing value_type and supporting std::begin/std::end
 template<typename Container, typename V>
 requires std::equality_comparable_with<typename Container::value_type, V>
 auto find(Container& c, V const& value) -> typename Container::value_type* {

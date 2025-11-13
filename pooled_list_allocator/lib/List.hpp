@@ -6,8 +6,7 @@
 #include <concepts>
 #include <type_traits>
 #include <iterator>
-#include <memory>    // addressof
-#include <cassert>
+#include <memory>
 
 #include "MallocAllocator.hpp"
 #include "PooledAllocator.hpp"
@@ -78,9 +77,8 @@ public:
 
     // insert at end and return reference to inserted value
     T& insert(const T& value) requires std::copy_constructible<T> {
-        Node* raw = nodeAlloc_.allocate();
+        Node* raw = nodeAlloc_.allocate(); // allocate storage for Node
         Node* n = reinterpret_cast<Node*>(raw);
-        // placement-new construct Node in allocated memory
         try {
             new (n) Node{nullptr, nullptr, value};
         } catch (...) {
@@ -109,7 +107,6 @@ public:
                 if (cur->next) cur->next->prev = cur->prev;
                 else tail_ = cur->prev;
 
-                // explicitly call destructor and return memory to allocator
                 cur->~Node();
                 nodeAlloc_.deallocate(cur);
                 --size_;
@@ -118,7 +115,7 @@ public:
         }
     }
 
-    // iterator
+    // iterator (non-const)
     struct iterator {
         using iterator_category = std::bidirectional_iterator_tag;
         using value_type = T;

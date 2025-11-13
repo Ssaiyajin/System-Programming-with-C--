@@ -8,46 +8,41 @@
 
 namespace pool {
 
-template <typename T>
-class MallocAllocator {
-public:
+template<typename T>
+struct MallocAllocator {
     using value_type = T;
-
-    // Mandatory typedefs
     using pointer = T*;
     using const_pointer = const T*;
-    using reference = T&;
-    using const_reference = const T&;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    // Required by STL allocator model
-    template <typename U>
-    struct rebind {
-        using other = MallocAllocator<U>;
-    };
+    MallocAllocator() noexcept = default;
 
-    MallocAllocator() noexcept {}
-    template <typename U>
+    // Converting constructor so allocators of different T are interconvertible
+    template<typename U>
     MallocAllocator(const MallocAllocator<U>&) noexcept {}
 
-    pointer allocate(size_type n) {
-        if (n == 0)
-            return nullptr;
+    MallocAllocator(const MallocAllocator&) noexcept = default;
+    MallocAllocator(MallocAllocator&&) noexcept = default;
+    MallocAllocator& operator=(const MallocAllocator&) noexcept = default;
+    MallocAllocator& operator=(MallocAllocator&&) noexcept = default;
 
-        if (n > static_cast<size_type>(-1) / sizeof(T))
-            throw std::bad_alloc();
+    template<typename U>
+    struct rebind { using other = MallocAllocator<U>; };
 
-        void* p = std::malloc(n * sizeof(T));
-        if (!p)
-            throw std::bad_alloc();
-        return static_cast<pointer>(p);
+    // Allocate storage for one T (uninitialized)
+    T* allocate() {
+        void* p = std::malloc(sizeof(T));
+        if (!p) throw std::bad_alloc();
+        return static_cast<T*>(p);
     }
 
-    void deallocate(pointer p, size_type) noexcept {
-        std::free(p);
+    // Deallocate storage previously returned by allocate()
+    void deallocate(T* p) noexcept {
+        std::free(static_cast<void*>(p));
     }
 };
+
 } // namespace pool
 
-#endif
+#endif // POOL_MALLOC_ALLOCATOR_HPP
