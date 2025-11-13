@@ -26,7 +26,7 @@ jobs:
           - chaining_hash_table
           - raii_temp_files
           - arithmetic_ast
-          # - pooled_list_allocator
+          - pooled_list_allocator
           # - thread_safe_multimap
 
     steps:
