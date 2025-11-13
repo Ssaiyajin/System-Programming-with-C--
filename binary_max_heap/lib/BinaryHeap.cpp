@@ -47,3 +47,4 @@ unsigned extract(std::vector<unsigned>& heap) {
 
     return root;
 }
+}
