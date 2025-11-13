@@ -2,21 +2,17 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-//---------------------------------------------------------------------------
+
+namespace simplevm {
+
 int32_t runVM()
-// Run the VM. Return the value from register A when the execution finished.
 {
     int A = 0, B = 0, C = 0, D = 0;
-    float X = 0.0f, Y = 0.0f;
 
-    // Local instruction list (currently empty); populate this or change runVM to accept
-    // a caller-provided std::vector<std::string> instructions.
     std::vector<std::string> instructions;
 
     for (const std::string& instruction : instructions) {
         std::istringstream iss(instruction);
-        int opcode;
-        iss >> opcode;
         int opcode;
         iss >> opcode;
 
@@ -67,16 +63,15 @@ int32_t runVM()
 
     return A;
 }
-//---------------------------------------------------------------------------
+
 void fibonacciProgram(unsigned n)
-// Print a VM program that calculates the nth fibonacci number.
 {
     std::vector<std::string> program;
     program.push_back("10A0"); // Set f0 to 0
     program.push_back("10B1"); // Set f1 to 1
     program.push_back("10C0"); // Set fn to 0
 
-    for (int i = 2; i <= n; i++) {
+    for (unsigned i = 2; i <= n; i++) {
         program.push_back("20D A"); // D = A (fn-2)
         program.push_back("20A B"); // A = B (fn-1)
         program.push_back("20B C"); // B = C (fn)
@@ -86,7 +81,6 @@ void fibonacciProgram(unsigned n)
     for (const std::string& instruction : program) {
         std::cout << instruction << std::endl;
     }
+}
 
-//---------------------------------------------------------------------------
 } // namespace simplevm
-//---------------------------------------------------------------------------
