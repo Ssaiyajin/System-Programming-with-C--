@@ -5,8 +5,13 @@
 #include <unordered_set>
 #include <gtest/gtest.h>
 
-using namespace pool;
 using namespace std;
+using namespace pool;
+
+//----------------------------------------------------------------------------
+// Alias the actual allocator class to the expected name
+template <typename T>
+using MallocAllocator = H_lib_MallocAllocator<T>;
 
 namespace {
 
