@@ -1,28 +1,16 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include <cstddef>
-#include <concepts>
 #include <memory>
+#include <concepts>
+
+#include "lib/MallocAllocator.hpp"
 
 namespace pool {
+namespace test {
 
-// Minimal stub for MallocAllocator to make tests compile
 template <typename T>
-struct MallocAllocator {
-    using value_type = T;
-
-    T* allocate() {
-        return static_cast<T*>(::operator new(sizeof(T)));
-    }
-
-    void deallocate(T* ptr) {
-        ::operator delete(ptr);
-    }
-};
-
-} // namespace pool
-
-namespace pool::test {
+using MallocAllocator = pool::MallocAllocator<T>;
 
 // ---- Allocator Concept Check ----
 template <typename Alloc>
@@ -31,12 +19,11 @@ concept AllocatorConcept = requires(Alloc a, typename Alloc::value_type* p) {
     { a.deallocate(p) };
 };
 
-// ---- Scoped helper ----
+// ---- Helper class to manage allocations safely ----
 template <typename T>
 class ScopedMallocAllocator {
 public:
     ScopedMallocAllocator() = default;
-
     ~ScopedMallocAllocator() {
         for (T* ptr : allocations) {
             if (ptr)
@@ -55,7 +42,7 @@ public:
     }
 
 private:
-    pool::MallocAllocator<T> allocator;
+    MallocAllocator<T> allocator;
     std::vector<T*> allocations;
 };
 
@@ -67,8 +54,8 @@ struct Foo {
 
 // ---- TESTS ----
 TEST(TestMallocAllocator, Concept_Test) {
-    EXPECT_TRUE((AllocatorConcept<pool::MallocAllocator<int>>));
-    EXPECT_TRUE((AllocatorConcept<pool::MallocAllocator<Foo>>));
+    EXPECT_TRUE((AllocatorConcept<MallocAllocator<int>>));
+    EXPECT_TRUE((AllocatorConcept<MallocAllocator<Foo>>));
 }
 
 TEST(TestMallocAllocator, Allocate_Deallocate_Int) {
@@ -106,4 +93,5 @@ TEST(TestMallocAllocator, MultipleAllocations) {
     scopedAlloc.deallocate(b);
 }
 
-} // namespace pool::test
+} // namespace test
+} // namespace pool
