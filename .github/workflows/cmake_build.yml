@@ -23,7 +23,7 @@ jobs:
           - indirect_sorting
           - arithmetic_types
           - bitset_container
-          # - chaining_hash_table
+          - chaining_hash_table
           # - raii_temp_files
           # - arithmetic_ast
           # - pooled_list_allocator
