@@ -26,8 +26,9 @@ public:
     ScopedMallocAllocator() = default;
     ~ScopedMallocAllocator() {
         for (T* ptr : allocations) {
-            if (ptr)
+            if (ptr) {
                 allocator.deallocate(ptr);
+            }
         }
     }
 
