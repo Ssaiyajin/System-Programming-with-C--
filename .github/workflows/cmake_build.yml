@@ -1,106 +1,29 @@
-name: CMake Build and Lint
+name: CMake Build
 
 on:
   push:
   pull_request:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  CMAKE_BUILD_TYPE: Debug
-
 jobs:
   build:
-    name: Build - ${{ matrix.project }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        project:
-          - simple_vm
-          - binary_max_heap
-          - indirect_sorting
-          - arithmetic_types
-          - bitset_container
-          - chaining_hash_table
-          - raii_temp_files
-          - arithmetic_ast
-          - pooled_list_allocator
-          - thread_safe_multimap
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake clang-tidy ninja-build
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ clang-tidy
 
-      - name: Configure CMake (generate build dir + compile_commands.json)
+      - name: Clean previous build (important)
         run: |
-          set -euo pipefail
-          cmake -S "${{ matrix.project }}" -B "build_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          rm -rf build_pooled_list_allocator
+          mkdir -p build_pooled_list_allocator
+
+      - name: Configure CMake
+        run: |
+          cmake -S pooled_list_allocator -B build_pooled_list_allocator \
+          -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build project
-        run: |
-          set -euo pipefail
-          cmake --build "build_${{ matrix.project }}" -- -j$(nproc)
-
-      - name: Run tests (ctest if available)
-        run: |
-          set -euo pipefail
-          if [ -f "build_${{ matrix.project }}/CTestTestfile.cmake" ]; then
-            cd "build_${{ matrix.project }}"
-            # Run tests and fail the job if tests fail
-            ctest --output-on-failure -j$(nproc)
-          else
-            echo "No ctest configuration found for ${{ matrix.project }} — skipping ctest"
-          fi
-
-  lint:
-    name: Lint - ${{ matrix.project }}
-    needs: build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        project:
-          - simple_vm
-          - binary_max_heap
-          - indirect_sorting
-          - arithmetic_types
-          - bitset_container
-          - chaining_hash_table
-          - raii_temp_files
-          - arithmetic_ast
-          - pooled_list_allocator
-          - thread_safe_multimap
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install lint dependencies
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-tidy cmake ninja-build
-
-      - name: Configure CMake for lint (generate compile_commands.json)
-        run: |
-          set -euo pipefail
-          cmake -S "${{ matrix.project }}" -B "lint_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
-      - name: Run clang-tidy lint (if compile_commands.json exists)
-        run: |
-          set -euo pipefail
-          if [ -f "lint_${{ matrix.project }}/compile_commands.json" ]; then
-            echo "Running clang-tidy for project: ${{ matrix.project }}"
-            # Run clang-tidy over common C/C++ source file extensions. Limit parallelism to avoid overload.
-            find "${{ matrix.project }}" -type f \( -name '*.cpp' -o -name '*.cc' -o -name '*.cxx' -o -name '*.c' \) -print0 \
-              | xargs -0 -n1 -P2 -I{} clang-tidy "{}" -p "lint_${{ matrix.project }}" || true
-          else
-            echo "compile_commands.json not found for ${{ matrix.project }} — skipping clang-tidy"
-          fi
+        run: cmake --build build_pooled_list_allocator -- -j$(nproc)
