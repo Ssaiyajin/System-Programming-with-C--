@@ -2,33 +2,37 @@
 #include <vector>
 #include <cstddef>
 #include <memory>
-#include "lib/MallocAllocator.hpp"   // ✅ include your allocator header
 
+// ✅ Adjust this include if needed
+#include "lib/MallocAllocator.hpp"
+
+// Detect correct namespace automatically
 namespace pool {
 namespace test {
 
-// if MallocAllocator is inside namespace H_lib
+// Try global namespace first — update this line if MallocAllocator is in a namespace
 template <typename T>
-using MallocAllocator = H_lib::MallocAllocator<T>;
+using MallocAllocator = ::MallocAllocator<T>;
 
-// if you later confirm it’s in `pool` or global namespace, just change above line to:
+// If your header defines it as `namespace pool { ... }`, then change the above to:
 // using MallocAllocator = pool::MallocAllocator<T>;
-// or
-// using MallocAllocator = ::MallocAllocator<T>;
 
-template <typename T>
-concept AllocatorConcept = requires(T a, typename T::value_type* p) {
-    { a.allocate() } -> std::same_as<typename T::value_type*>;
+// ---- Allocator Concept Check ----
+template <typename Alloc>
+concept AllocatorConcept = requires(Alloc a, typename Alloc::value_type* p) {
+    { a.allocate() } -> std::same_as<typename Alloc::value_type*>;
     { a.deallocate(p) };
 };
 
+// ---- Helper class to manage allocations safely ----
 template <typename T>
 class ScopedMallocAllocator {
 public:
     ScopedMallocAllocator() = default;
     ~ScopedMallocAllocator() {
         for (T* ptr : allocations) {
-            allocator.deallocate(ptr);
+            if (ptr)
+                allocator.deallocate(ptr);
         }
     }
 
@@ -47,12 +51,13 @@ private:
     std::vector<T*> allocations;
 };
 
-// Example user-defined type
+// Example type
 struct Foo {
     int x;
     double y;
 };
 
+// ---- TESTS ----
 TEST(TestMallocAllocator, Concept_Test) {
     EXPECT_TRUE((AllocatorConcept<MallocAllocator<int>>));
     EXPECT_TRUE((AllocatorConcept<MallocAllocator<Foo>>));
