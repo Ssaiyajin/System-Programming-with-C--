@@ -8,99 +8,111 @@
 // - Allocates memory in blocks for contiguous allocations
 //---------------------------------------------------------------------------
 
+#include <cstdlib>
 #include <cstddef>
 #include <new>
-#include <vector>
 #include <utility>
-#include <cstdint>
+#include <type_traits>
+#include <cassert>
 
 namespace pool {
 
-template <typename T>
+template<typename T>
 class PooledAllocator {
 public:
     using value_type = T;
 
-    explicit PooledAllocator(std::size_t block_elems = 1024) noexcept
-        : block_size_(block_elems), current_index_(0) {}
+    PooledAllocator() noexcept
+      : head_(nullptr), initial_capacity_(8) {}
 
-    ~PooledAllocator() noexcept {
-        for (void* b : blocks_) {
-            ::operator delete(b, std::align_val_t(alignof(T)));
-        }
+    // disallow copy (cheap move only)
+    PooledAllocator(const PooledAllocator&) = delete;
+    PooledAllocator& operator=(const PooledAllocator&) = delete;
+
+    // move
+    PooledAllocator(PooledAllocator&& other) noexcept
+      : head_(other.head_), initial_capacity_(other.initial_capacity_) {
+        other.head_ = nullptr;
     }
 
-    // Move semantics: transfer ownership of blocks and free-list.
-    PooledAllocator(PooledAllocator&& other) noexcept {
-        steal_from(std::move(other));
-    }
     PooledAllocator& operator=(PooledAllocator&& other) noexcept {
         if (this != &other) {
-            for (void* b : blocks_) ::operator delete(b, std::align_val_t(alignof(T)));
-            steal_from(std::move(other));
+            release_all();
+            head_ = other.head_;
+            initial_capacity_ = other.initial_capacity_;
+            other.head_ = nullptr;
         }
         return *this;
     }
 
-    // Non-copyable
-    PooledAllocator(const PooledAllocator&) = delete;
-    PooledAllocator& operator=(const PooledAllocator&) = delete;
+    template<typename U>
+    struct rebind { using other = PooledAllocator<U>; };
 
-    // Allocate and default-construct a single T.
-    T* allocate() {
-        // Reuse freed element if available (LIFO)
-        if (!free_list_.empty()) {
-            T* p = free_list_.back();
-            free_list_.pop_back();
-            ::new (static_cast<void*>(p)) T();
-            return p;
-        }
-
-        // Ensure we have a block with free slots
-        if (blocks_.empty() || current_index_ >= block_size_) {
-            allocate_block();
-        }
-
-        // Compute pointer to next element in last block
-        char* base = static_cast<char*>(blocks_.back());
-        T* p = reinterpret_cast<T*>(base + current_index_ * sizeof(T));
-        ++current_index_;
-        ::new (static_cast<void*>(p)) T();
-        return p;
+    ~PooledAllocator() noexcept {
+        release_all();
     }
 
-    // Destroy and release to free-list
+    // allocate storage for one T (uninitialized)
+    T* allocate() {
+        if (!head_ || head_->used >= head_->capacity) {
+            allocate_chunk(next_capacity());
+        }
+        unsigned char* data = reinterpret_cast<unsigned char*>(head_ + 1);
+        T* result = reinterpret_cast<T*>(data + head_->used * sizeof(T));
+        head_->used += 1;
+        return result;
+    }
+
+    // deallocate only if this pointer is the last allocated in the most recent chunk
     void deallocate(T* p) noexcept {
-        if (!p) return;
-        p->~T();
-        free_list_.push_back(p);
+        if (!p || !head_) return;
+        unsigned char* data = reinterpret_cast<unsigned char*>(head_ + 1);
+        if (head_->used == 0) return;
+        unsigned char* last_addr = data + (head_->used - 1) * sizeof(T);
+        if (reinterpret_cast<unsigned char*>(p) == last_addr) {
+            // pop
+            head_->used -= 1;
+        }
     }
 
 private:
-    std::size_t block_size_;
-    std::vector<void*> blocks_;
-    std::size_t current_index_ = 0; // index within last block
-    std::vector<T*> free_list_;
+    struct Chunk {
+        Chunk* next;
+        std::size_t capacity;
+        std::size_t used;
+        // data follows
+    };
 
-    void allocate_block() {
-        std::size_t bytes = block_size_ * sizeof(T);
-        void* mem = ::operator new(bytes, std::align_val_t(alignof(T)));
-        blocks_.push_back(mem);
-        current_index_ = 0;
+    Chunk* head_;
+    std::size_t initial_capacity_;
+
+    std::size_t next_capacity() const noexcept {
+        return head_ ? (head_->capacity * 2) : initial_capacity_;
     }
 
-    void steal_from(PooledAllocator&& other) noexcept {
-        block_size_ = other.block_size_;
-        blocks_ = std::move(other.blocks_);
-        current_index_ = other.current_index_;
-        free_list_ = std::move(other.free_list_);
-        other.current_index_ = 0;
-        other.block_size_ = 0;
-        other.blocks_.clear();
-        other.free_list_.clear();
+    void allocate_chunk(std::size_t capacity) {
+        // allocate: sizeof(Chunk) + capacity * sizeof(T)
+        std::size_t bytes = sizeof(Chunk) + capacity * sizeof(T);
+        void* mem = std::malloc(bytes);
+        if (!mem) throw std::bad_alloc();
+        Chunk* ch = reinterpret_cast<Chunk*>(mem);
+        ch->next = head_;
+        ch->capacity = capacity;
+        ch->used = 0;
+        head_ = ch;
+    }
+
+    void release_all() noexcept {
+        Chunk* cur = head_;
+        while (cur) {
+            Chunk* next = cur->next;
+            std::free(reinterpret_cast<void*>(cur));
+            cur = next;
+        }
+        head_ = nullptr;
     }
 };
 
 } // namespace pool
-//--------------------------------------------------------------------------- 
+
 #endif

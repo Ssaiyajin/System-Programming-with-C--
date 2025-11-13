@@ -3,9 +3,10 @@
 
 #include <cstdlib>
 #include <cstddef>
+#include <new>
 #include <type_traits>
-#include <utility>
-#include <new>  
+
+namespace pool {
 
 template<typename T>
 struct MallocAllocator {
@@ -18,9 +19,7 @@ struct MallocAllocator {
     MallocAllocator& operator=(MallocAllocator&&) noexcept = default;
 
     template<typename U>
-    struct rebind {
-        using other = MallocAllocator<U>;
-    };
+    struct rebind { using other = MallocAllocator<U>; };
 
     T* allocate() {
         void* p = std::malloc(sizeof(T));
@@ -33,4 +32,6 @@ struct MallocAllocator {
     }
 };
 
-#endif // MALLOC_ALLOCATOR_HPP
+} // namespace pool
+
+#endif
