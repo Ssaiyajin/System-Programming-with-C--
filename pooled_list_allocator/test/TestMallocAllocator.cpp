@@ -21,7 +21,7 @@ class ScopedMallocAllocator {
 
     public:
     ~ScopedMallocAllocator() {
-        for (auto* ptr : allocations)
+        for (T* ptr : allocations)
             allocator.deallocate(ptr);
     }
 
