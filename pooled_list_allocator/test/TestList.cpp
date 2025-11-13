@@ -141,21 +141,36 @@ void resetCounters() {
 //---------------------------------------------------------------------------
 template <typename T>
 class TestAllocator {
-    public:
+public:
+    using value_type = T;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+
     template <typename U>
-    using rebind = TestAllocator<U>;
+    struct rebind { using other = TestAllocator<U>; };
 
     MallocAllocator<T> allocator;
 
-    T* allocate() {
+    TestAllocator() noexcept = default;
+
+    template <typename U>
+    TestAllocator(const TestAllocator<U>&) noexcept {}
+
+    // Standard allocator interface
+    pointer allocate(size_type n) {
         ++allocateCalls;
-        return allocator.allocate();
+        return allocator.allocate(n);
     }
 
-    void deallocate(T* ptr) {
+    void deallocate(pointer p, size_type n) {
         ++deallocateCalls;
-        allocator.deallocate(ptr);
+        allocator.deallocate(p, n);
     }
+
+    bool operator==(const TestAllocator&) const noexcept { return true; }
+    bool operator!=(const TestAllocator&) const noexcept { return false; }
 };
 //---------------------------------------------------------------------------
 class TrackedStructors {
