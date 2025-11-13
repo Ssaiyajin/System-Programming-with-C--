@@ -1,3 +1,8 @@
+#include "lib/BinaryHeap.hpp"
+#include <cassert>
+//---------------------------------------------------------------------------
+using namespace std;
+//---------------------------------------------------------------------------
 namespace binary_heap {
 
 void insert(std::vector<unsigned>& heap, unsigned value) {
