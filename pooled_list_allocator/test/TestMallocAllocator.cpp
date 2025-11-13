@@ -5,20 +5,23 @@
 #include <unordered_set>
 #include <gtest/gtest.h>
 
+// ---------------------------------------------------------------------------
+using namespace pool;
 using namespace std;
 
+// Properly refer to the allocator defined in the pool namespace
 template <typename T>
-using MallocAllocator = H_lib::MallocAllocator<T>; 
-//---------------------------------------------------------------------------
+using MallocAllocator = pool::MallocAllocator<T>;
+// ---------------------------------------------------------------------------
 namespace {
-//---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 template <typename T>
 class ScopedMallocAllocator {
-    private:
+private:
     MallocAllocator<T> allocator;
     unordered_set<T*> allocations;
 
-    public:
+public:
     ~ScopedMallocAllocator() {
         for (T* ptr : allocations)
             allocator.deallocate(ptr);
@@ -35,9 +38,9 @@ class ScopedMallocAllocator {
         allocations.erase(ptr);
     }
 };
-//---------------------------------------------------------------------------
 } // namespace
-//---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 TEST(TestMallocAllocator, Concept) {
     struct Foo {
         Foo(const Foo&) = delete;
@@ -45,12 +48,12 @@ TEST(TestMallocAllocator, Concept) {
         Foo& operator=(const Foo&) = delete;
         Foo& operator=(Foo&&) = delete;
     };
-    // You can change EXPECT_TRUE to static_assert in the following lines to
-    // get more detailed error messages that explain why the test fails.
-    EXPECT_TRUE(test::IsAllocator<MallocAllocator<int>>);
-    EXPECT_TRUE(test::IsAllocator<MallocAllocator<Foo>>);
+
+    EXPECT_TRUE(pool::test::IsAllocator<MallocAllocator<int>>);
+    EXPECT_TRUE(pool::test::IsAllocator<MallocAllocator<Foo>>);
 }
-//---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 TEST(TestMallocAllocator, AllocateInt) {
     ScopedMallocAllocator<int> a;
     int* i = a.allocate();
@@ -59,7 +62,8 @@ TEST(TestMallocAllocator, AllocateInt) {
     EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(int), 0);
     EXPECT_NE(i, j);
 }
-//---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 TEST(TestMallocAllocator, AllocateLargeAlignType) {
     using LargeAlignType = std::max_align_t;
     ScopedMallocAllocator<LargeAlignType> a;
@@ -69,7 +73,8 @@ TEST(TestMallocAllocator, AllocateLargeAlignType) {
     EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(LargeAlignType), 0);
     EXPECT_NE(i, j);
 }
-//---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 TEST(TestMallocAllocator, AllocateMany) {
     ScopedMallocAllocator<int> a;
     unordered_set<int*> pointers;
@@ -79,4 +84,4 @@ TEST(TestMallocAllocator, AllocateMany) {
         pointers.insert(p);
     }
 }
-//---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
