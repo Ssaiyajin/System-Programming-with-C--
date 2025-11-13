@@ -6,10 +6,11 @@
 #include <gtest/gtest.h>
 
 // ---------------------------------------------------------------------------
+// We assume MallocAllocator is defined in namespace pool
 using namespace pool;
 using namespace std;
 
-// Properly refer to the allocator defined in the pool namespace
+// Alias template for convenience
 template <typename T>
 using MallocAllocator = pool::MallocAllocator<T>;
 // ---------------------------------------------------------------------------
@@ -23,8 +24,10 @@ private:
 
 public:
     ~ScopedMallocAllocator() {
-        for (T* ptr : allocations)
+        // Clean up all allocated memory
+        for (T* ptr : allocations) {
             allocator.deallocate(ptr);
+        }
     }
 
     T* allocate() {
