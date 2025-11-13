@@ -53,3 +53,5 @@ public:
 };
 
 } // namespace pool
+
+#endif // H_lib_MallocAllocator
