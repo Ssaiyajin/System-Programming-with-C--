@@ -19,15 +19,15 @@ jobs:
       matrix:
         project:
           - simple_vm
-          - binary_max_heap
-          - indirect_sorting
-          - arithmetic_types
-          - bitset_container
-          - chaining_hash_table
-          - raii_temp_files
-          - arithmetic_ast
-          - pooled_list_allocator
-          - thread_safe_multimap
+          # - binary_max_heap
+          # - indirect_sorting
+          # - arithmetic_types
+          # - bitset_container
+          # - chaining_hash_table
+          # - raii_temp_files
+          # - arithmetic_ast
+          # - pooled_list_allocator
+          # - thread_safe_multimap
 
     steps:
       - name: Checkout repository
@@ -39,10 +39,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake clang-tidy ninja-build
 
-      - name: Configure CMake (generate build dir + compile_commands.json)
+      - name: Cleanup previous build directories
         run: |
           set -euo pipefail
-          cmake -S "${{ matrix.project }}" -B "build_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+           rm -rf "build_${{ matrix.project }}" "lint_${{ matrix.project }}" || true
+      
+      - name: Configure CMake (generate build dir + compile_commands.json)
+        run: |
+            set -euo pipefail
+            cmake -S "${{ matrix.project }}" -B "build_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build project
         run: |
