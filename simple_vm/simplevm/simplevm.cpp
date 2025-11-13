@@ -1,7 +1,7 @@
 #include "simplevm/simplevm.hpp"
 #include <iostream>
-//---------------------------------------------------------------------------
-namespace simplevm {
+#include <vector>
+#include <sstream>
 //---------------------------------------------------------------------------
 int32_t runVM()
 // Run the VM. Return the value from register A when the execution finished.
@@ -9,8 +9,14 @@ int32_t runVM()
     int A = 0, B = 0, C = 0, D = 0;
     float X = 0.0f, Y = 0.0f;
 
+    // Local instruction list (currently empty); populate this or change runVM to accept
+    // a caller-provided std::vector<std::string> instructions.
+    std::vector<std::string> instructions;
+
     for (const std::string& instruction : instructions) {
         std::istringstream iss(instruction);
+        int opcode;
+        iss >> opcode;
         int opcode;
         iss >> opcode;
 
