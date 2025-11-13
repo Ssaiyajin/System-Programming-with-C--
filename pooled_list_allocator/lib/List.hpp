@@ -6,7 +6,7 @@
 #include <concepts>
 #include <type_traits>
 #include <iterator>
-#include <memory>
+#include <memory>    // allocator_traits, addressof
 
 #include "MallocAllocator.hpp"
 #include "PooledAllocator.hpp"
@@ -26,7 +26,9 @@ private:
         T value;
     };
 
-    using NodeAllocator = typename allocator_type::template rebind<Node>::other;
+    // Use allocator_traits to rebind the allocator to Node robustly
+    using NodeAllocator = typename std::allocator_traits<allocator_type>::template rebind_alloc<Node>;
+    using NodeAllocTraits = std::allocator_traits<NodeAllocator>;
 
 public:
     List() noexcept(std::is_nothrow_default_constructible_v<NodeAllocator>)
@@ -77,12 +79,14 @@ public:
 
     // insert at end and return reference to inserted value
     T& insert(const T& value) requires std::copy_constructible<T> {
-        Node* raw = nodeAlloc_.allocate(); // allocate storage for Node
-        Node* n = reinterpret_cast<Node*>(raw);
+        // allocate raw storage for Node using allocator
+        Node* raw = NodeAllocTraits::allocate(nodeAlloc_, 1);
+        // placement-new construct Node in allocated memory
+        Node* n = raw;
         try {
-            new (n) Node{nullptr, nullptr, value};
+            ::new (static_cast<void*>(n)) Node{nullptr, nullptr, value};
         } catch (...) {
-            nodeAlloc_.deallocate(raw);
+            NodeAllocTraits::deallocate(nodeAlloc_, raw, 1);
             throw;
         }
 
@@ -108,7 +112,7 @@ public:
                 else tail_ = cur->prev;
 
                 cur->~Node();
-                nodeAlloc_.deallocate(cur);
+                NodeAllocTraits::deallocate(nodeAlloc_, cur, 1);
                 --size_;
                 return;
             }
@@ -177,7 +181,7 @@ private:
         while (cur) {
             Node* next = cur->next;
             cur->~Node();
-            nodeAlloc_.deallocate(cur);
+            NodeAllocTraits::deallocate(nodeAlloc_, cur, 1);
             cur = next;
         }
         head_ = tail_ = nullptr;
