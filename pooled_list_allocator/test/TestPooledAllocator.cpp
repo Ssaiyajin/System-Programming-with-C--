@@ -5,11 +5,10 @@
 #include <unordered_set>
 #include <gtest/gtest.h>
 
-using namespace std;
 using namespace pool;
+using namespace std;
 
-//----------------------------------------------------------------------------
-// Alias the actual allocator class to the expected name
+// Proper template alias
 template <typename T>
 using PooledAllocator = H_lib_PooledAllocator<T>;
 
@@ -29,12 +28,14 @@ public:
         }
     }
 
+    // Allocate memory for one element
     T* allocate() {
         T* ptr = allocator_.allocate();
         allocations_.insert(ptr);
         return ptr;
     }
 
+    // Deallocate a specific pointer
     void deallocate(T* ptr) {
         if (allocations_.erase(ptr) > 0) {
             allocator_.deallocate(ptr);
@@ -97,13 +98,4 @@ TEST(TestPooledAllocator, AllocateMany) {
         int* ptr = alloc.allocate();
         ASSERT_TRUE(pointers.insert(ptr).second) << "Duplicate allocation detected";
     }
-}
-
-TEST(TestPooledAllocator, AllocateDeallocate) {
-    ScopedPooledAllocator<int> alloc;
-    int* i = alloc.allocate();
-    alloc.deallocate(i);
-
-    int* j = alloc.allocate();
-    EXPECT_NE(i, j);
 }

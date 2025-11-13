@@ -5,11 +5,10 @@
 #include <unordered_set>
 #include <gtest/gtest.h>
 
-using namespace std;
 using namespace pool;
+using namespace std;
 
-//----------------------------------------------------------------------------
-// Alias the actual allocator class to the expected name
+// Proper template alias
 template <typename T>
 using MallocAllocator = H_lib_MallocAllocator<T>;
 
