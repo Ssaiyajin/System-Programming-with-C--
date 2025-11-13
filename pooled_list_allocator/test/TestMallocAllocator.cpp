@@ -4,56 +4,38 @@
 #include <cstdint>
 #include <unordered_set>
 #include <gtest/gtest.h>
-
+//---------------------------------------------------------------------------
 using namespace pool;
 using namespace std;
-
-// Proper template alias
-template <typename T>
-using MallocAllocator = H_lib_MallocAllocator<T>;
-
+//---------------------------------------------------------------------------
 namespace {
-
-// RAII wrapper for MallocAllocator
+//---------------------------------------------------------------------------
 template <typename T>
 class ScopedMallocAllocator {
-private:
-    MallocAllocator<T> allocator_;
-    unordered_set<T*> allocations_;
+    private:
+    MallocAllocator<T> allocator;
+    unordered_set<T*> allocations;
 
-public:
+    public:
     ~ScopedMallocAllocator() {
-        for (T* ptr : allocations_) {
-            allocator_.deallocate(ptr);
-        }
+        for (auto* ptr : allocations)
+            allocator.deallocate(ptr);
     }
 
-    // Allocate memory for one element
     T* allocate() {
-        T* ptr = allocator_.allocate();
-        allocations_.insert(ptr);
-        return ptr;
+        T* result = allocator.allocate();
+        allocations.insert(result);
+        return result;
     }
 
-    // Deallocate a specific pointer
     void deallocate(T* ptr) {
-        if (allocations_.erase(ptr) > 0) {
-            allocator_.deallocate(ptr);
-        }
+        allocator.deallocate(ptr);
+        allocations.erase(ptr);
     }
 };
-
-// Utility function to test pointer alignment
-template <typename T>
-inline void EXPECT_ALIGNED(T* ptr) {
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % alignof(T), 0);
-}
-
+//---------------------------------------------------------------------------
 } // namespace
-
-//===========================================================================
-// Concept checks
-//===========================================================================
+//---------------------------------------------------------------------------
 TEST(TestMallocAllocator, Concept) {
     struct Foo {
         Foo(const Foo&) = delete;
@@ -61,41 +43,38 @@ TEST(TestMallocAllocator, Concept) {
         Foo& operator=(const Foo&) = delete;
         Foo& operator=(Foo&&) = delete;
     };
-
+    // You can change EXPECT_TRUE to static_assert in the following lines to
+    // get more detailed error messages that explain why the test fails.
     EXPECT_TRUE(test::IsAllocator<MallocAllocator<int>>);
     EXPECT_TRUE(test::IsAllocator<MallocAllocator<Foo>>);
 }
-
-//===========================================================================
-// Allocation tests
-//===========================================================================
+//---------------------------------------------------------------------------
 TEST(TestMallocAllocator, AllocateInt) {
-    ScopedMallocAllocator<int> alloc;
-    int* i = alloc.allocate();
-    int* j = alloc.allocate();
-
-    EXPECT_ALIGNED(i);
-    EXPECT_ALIGNED(j);
+    ScopedMallocAllocator<int> a;
+    int* i = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(int), 0);
+    int* j = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(int), 0);
     EXPECT_NE(i, j);
 }
-
+//---------------------------------------------------------------------------
 TEST(TestMallocAllocator, AllocateLargeAlignType) {
     using LargeAlignType = std::max_align_t;
-    ScopedMallocAllocator<LargeAlignType> alloc;
-    LargeAlignType* i = alloc.allocate();
-    LargeAlignType* j = alloc.allocate();
-
-    EXPECT_ALIGNED(i);
-    EXPECT_ALIGNED(j);
+    ScopedMallocAllocator<LargeAlignType> a;
+    LargeAlignType* i = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(LargeAlignType), 0);
+    LargeAlignType* j = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(LargeAlignType), 0);
     EXPECT_NE(i, j);
 }
-
+//---------------------------------------------------------------------------
 TEST(TestMallocAllocator, AllocateMany) {
-    ScopedMallocAllocator<int> alloc;
+    ScopedMallocAllocator<int> a;
     unordered_set<int*> pointers;
-
     for (size_t i = 0; i < 1000; ++i) {
-        int* ptr = alloc.allocate();
-        ASSERT_TRUE(pointers.insert(ptr).second) << "Duplicate allocation detected";
+        int* p = a.allocate();
+        ASSERT_EQ(pointers.count(p), 0);
+        pointers.insert(p);
     }
 }
+//---------------------------------------------------------------------------

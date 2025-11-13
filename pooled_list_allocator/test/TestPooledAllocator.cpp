@@ -4,56 +4,10 @@
 #include <cstdint>
 #include <unordered_set>
 #include <gtest/gtest.h>
-
+//---------------------------------------------------------------------------
 using namespace pool;
 using namespace std;
-
-// Proper template alias
-template <typename T>
-using PooledAllocator = H_lib_PooledAllocator<T>;
-
-namespace {
-
-// RAII wrapper for PooledAllocator
-template <typename T>
-class ScopedPooledAllocator {
-private:
-    PooledAllocator<T> allocator_;
-    unordered_set<T*> allocations_;
-
-public:
-    ~ScopedPooledAllocator() {
-        for (T* ptr : allocations_) {
-            allocator_.deallocate(ptr);
-        }
-    }
-
-    // Allocate memory for one element
-    T* allocate() {
-        T* ptr = allocator_.allocate();
-        allocations_.insert(ptr);
-        return ptr;
-    }
-
-    // Deallocate a specific pointer
-    void deallocate(T* ptr) {
-        if (allocations_.erase(ptr) > 0) {
-            allocator_.deallocate(ptr);
-        }
-    }
-};
-
-// Utility function to test pointer alignment
-template <typename T>
-inline void EXPECT_ALIGNED(T* ptr) {
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % alignof(T), 0);
-}
-
-} // namespace
-
-//===========================================================================
-// Concept checks
-//===========================================================================
+//---------------------------------------------------------------------------
 TEST(TestPooledAllocator, Concept) {
     struct Foo {
         Foo(const Foo&) = delete;
@@ -61,41 +15,66 @@ TEST(TestPooledAllocator, Concept) {
         Foo& operator=(const Foo&) = delete;
         Foo& operator=(Foo&&) = delete;
     };
-
+    // You can change EXPECT_TRUE to static_assert in the following lines to
+    // get more detailed error messages that explain why the test fails.
     EXPECT_TRUE(test::IsAllocator<PooledAllocator<int>>);
     EXPECT_TRUE(test::IsAllocator<PooledAllocator<Foo>>);
 }
-
-//===========================================================================
-// Allocation tests
-//===========================================================================
+//---------------------------------------------------------------------------
 TEST(TestPooledAllocator, AllocateInt) {
-    ScopedPooledAllocator<int> alloc;
-    int* i = alloc.allocate();
-    int* j = alloc.allocate();
-
-    EXPECT_ALIGNED(i);
-    EXPECT_ALIGNED(j);
+    PooledAllocator<int> a;
+    int* i = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(int), 0);
+    int* j = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(int), 0);
     EXPECT_NE(i, j);
 }
-
+//---------------------------------------------------------------------------
 TEST(TestPooledAllocator, AllocateLargeAlignType) {
     using LargeAlignType = std::max_align_t;
-    ScopedPooledAllocator<LargeAlignType> alloc;
-    LargeAlignType* i = alloc.allocate();
-    LargeAlignType* j = alloc.allocate();
-
-    EXPECT_ALIGNED(i);
-    EXPECT_ALIGNED(j);
+    PooledAllocator<LargeAlignType> a;
+    LargeAlignType* i = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(LargeAlignType), 0);
+    LargeAlignType* j = a.allocate();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(LargeAlignType), 0);
     EXPECT_NE(i, j);
 }
-
+//---------------------------------------------------------------------------
 TEST(TestPooledAllocator, AllocateMany) {
-    ScopedPooledAllocator<int> alloc;
+    PooledAllocator<int> a;
     unordered_set<int*> pointers;
-
-    for (size_t i = 0; i < 1000; ++i) {
-        int* ptr = alloc.allocate();
-        ASSERT_TRUE(pointers.insert(ptr).second) << "Duplicate allocation detected";
+    for (unsigned i = 0; i < 1000; ++i) {
+        int* p = a.allocate();
+        ASSERT_EQ(pointers.count(p), 0);
+        pointers.insert(p);
     }
 }
+//---------------------------------------------------------------------------
+TEST(TestPooledAllocator, AllocateDeallocate) {
+    PooledAllocator<int> a;
+    // Find two allocations that are stored contiguously
+    int* i = a.allocate();
+    int* j = a.allocate();
+    unsigned iterations = 0;
+    while (iterations < 10 && (i + 1 != j)) {
+        i = j;
+        j = a.allocate();
+        ++iterations;
+    }
+    ASSERT_LT(iterations, 10);
+    // Check that the last allocation is reused after freeing
+    a.deallocate(j);
+    int* j2 = a.allocate();
+    EXPECT_EQ(j, j2);
+}
+//---------------------------------------------------------------------------
+TEST(TestPooledAllocator, Move) {
+    PooledAllocator<int> a;
+    for (unsigned i = 0; i < 1000; ++i) {
+        a.allocate();
+    }
+    PooledAllocator<int> b(move(a));
+    PooledAllocator<int> c;
+    c = move(b);
+}
+//---------------------------------------------------------------------------
