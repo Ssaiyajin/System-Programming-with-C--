@@ -1,5 +1,12 @@
 #ifndef H_lib_PooledAllocator
 #define H_lib_PooledAllocator
+//---------------------------------------------------------------------------
+// Minimal pooled allocator implementation used by the tests.
+// - allocate() default-constructs one T and returns T*
+// - deallocate(T*) destroys the object and returns the slot to a free-list
+// - Moveable, non-copyable
+// - Allocates memory in blocks for contiguous allocations
+//---------------------------------------------------------------------------
 
 #include <cstdlib>
 #include <cstddef>
@@ -15,21 +22,16 @@ class PooledAllocator {
 public:
     using value_type = T;
     using pointer = T*;
-    using const_pointer = const T*;
     using size_type = std::size_t;
-    using difference_type = std::ptrdiff_t;
-
-    template<typename U>
-    struct rebind { using other = PooledAllocator<U>; };
 
     PooledAllocator() noexcept : head_(nullptr), initial_capacity_(8) {}
-    
-    // Disable copy; enable move
+
+    // disable copy; enable move
     PooledAllocator(const PooledAllocator&) = delete;
     PooledAllocator& operator=(const PooledAllocator&) = delete;
 
     PooledAllocator(PooledAllocator&& other) noexcept
-        : head_(other.head_), initial_capacity_(other.initial_capacity_) {
+      : head_(other.head_), initial_capacity_(other.initial_capacity_) {
         other.head_ = nullptr;
     }
 
@@ -43,17 +45,19 @@ public:
         return *this;
     }
 
+    template<typename U>
+    struct rebind { using other = PooledAllocator<U>; };
+
     ~PooledAllocator() noexcept {
         release_all();
     }
 
-    // ===== STL-compliant interface =====
+    // -----------------------------
+    // STL-compliant allocate/deallocate
+    // -----------------------------
     T* allocate(size_type n) {
         if (n == 0) return nullptr;
-        if (n != 1) {
-            // optional: only support single-object allocations for simplicity
-            throw std::bad_alloc();
-        }
+        if (n != 1) throw std::bad_alloc(); // only single allocations supported
         return allocate_single();
     }
 
@@ -61,18 +65,42 @@ public:
         if (n == 1) deallocate_single(p);
     }
 
-    bool operator==(const PooledAllocator&) const noexcept { return true; }
-    bool operator!=(const PooledAllocator&) const noexcept { return false; }
+    // -----------------------------
+    // Zero-argument allocate for tests
+    // -----------------------------
+    T* allocate() {
+        return allocate_single();
+    }
+
+    void deallocate(T* p) noexcept {
+        deallocate_single(p);
+    }
 
 private:
     struct Chunk {
         Chunk* next;
         std::size_t capacity;
         std::size_t used;
+        // flexible array of data follows
     };
 
     Chunk* head_;
     std::size_t initial_capacity_;
+
+    std::size_t next_capacity() const noexcept {
+        return head_ ? head_->capacity * 2 : initial_capacity_;
+    }
+
+    void allocate_chunk(std::size_t capacity) {
+        std::size_t bytes = sizeof(Chunk) + capacity * sizeof(T);
+        void* mem = std::malloc(bytes);
+        if (!mem) throw std::bad_alloc();
+        Chunk* ch = reinterpret_cast<Chunk*>(mem);
+        ch->next = head_;
+        ch->capacity = capacity;
+        ch->used = 0;
+        head_ = ch;
+    }
 
     T* allocate_single() {
         if (!head_ || head_->used >= head_->capacity) {
@@ -93,26 +121,11 @@ private:
         }
     }
 
-    std::size_t next_capacity() const noexcept {
-        return head_ ? head_->capacity * 2 : initial_capacity_;
-    }
-
-    void allocate_chunk(std::size_t capacity) {
-        std::size_t bytes = sizeof(Chunk) + capacity * sizeof(T);
-        void* mem = std::malloc(bytes);
-        if (!mem) throw std::bad_alloc();
-        Chunk* ch = reinterpret_cast<Chunk*>(mem);
-        ch->next = head_;
-        ch->capacity = capacity;
-        ch->used = 0;
-        head_ = ch;
-    }
-
     void release_all() noexcept {
         Chunk* cur = head_;
         while (cur) {
             Chunk* next = cur->next;
-            std::free(cur);
+            std::free(reinterpret_cast<void*>(cur));
             cur = next;
         }
         head_ = nullptr;
