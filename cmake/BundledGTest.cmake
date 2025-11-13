@@ -1,26 +1,21 @@
-find_package(GTest)
+find_package(benchmark)
 
-if (NOT GTest_FOUND)
-    message(STATUS "Adding bundled Google Test")
+if (NOT benchmark_FOUND)
+    message(STATUS "Adding bundled Google Benchmark")
 
-    # Disable installation and gmock
-    set(BUILD_GMOCK OFF CACHE BOOL "Disable building gmock" FORCE)
-    set(INSTALL_GTEST OFF CACHE BOOL "Disable installation of gtest" FORCE)
+    set(BENCHMARK_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/benchmark")
 
-    # Make sure path exists before adding
-    set(GTEST_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest")
+    if (EXISTS "${BENCHMARK_SRC_DIR}/CMakeLists.txt")
+        # Use explicit binary dir when called out-of-tree
+        set(BENCHMARK_BIN_DIR "${CMAKE_BINARY_DIR}/_benchmark_build")
+        add_subdirectory("${BENCHMARK_SRC_DIR}" "${BENCHMARK_BIN_DIR}")
 
-    if (EXISTS "${GTEST_SRC_DIR}/CMakeLists.txt")
-        # Use explicit binary dir when called out of tree
-        set(GTEST_BIN_DIR "${CMAKE_BINARY_DIR}/_googletest_build")
-        add_subdirectory("${GTEST_SRC_DIR}" "${GTEST_BIN_DIR}")
-
-        if (TARGET gtest)
-            add_library(GTest::GTest ALIAS gtest)
+        if (TARGET benchmark)
+            add_library(benchmark::benchmark ALIAS benchmark)
         else()
-            message(WARNING "GTest::GTest target not found after add_subdirectory!")
+            message(WARNING "benchmark target not found after add_subdirectory!")
         endif()
     else()
-        message(FATAL_ERROR "Bundled GoogleTest source not found at ${GTEST_SRC_DIR}")
+        message(FATAL_ERROR "Bundled Google Benchmark source not found at ${BENCHMARK_SRC_DIR}")
     endif()
 endif()
