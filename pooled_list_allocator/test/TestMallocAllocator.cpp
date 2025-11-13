@@ -1,83 +1,112 @@
-#include "lib/MallocAllocator.hpp"
-#include "test/AllocatorConcept.hpp"
-#include <cstddef>
-#include <cstdint>
-#include <unordered_set>
+#include "PooledAllocator.hpp"       // your allocator header
+#include "test/AllocatorConcept.hpp" // contains test::IsAllocator
 #include <gtest/gtest.h>
-//---------------------------------------------------------------------------
-using namespace pool;
-using namespace std;
+#include <unordered_set>
+#include <vector>
+#include <cstdint>
+#include <cstddef>
+#include <algorithm>
 
-template <typename T>
-using MallocAllocator = pool::MallocAllocator;
-//---------------------------------------------------------------------------
-namespace {
-//---------------------------------------------------------------------------
-template <typename T>
-class ScopedMallocAllocator {
-    private:
-    MallocAllocator<T> allocator;
-    unordered_set<T*> allocations;
+// Use your allocator namespace
+using namespace H_lib; // adjust this to match the namespace of H_lib_PooledAllocator
 
-    public:
-    ~ScopedMallocAllocator() {
-        for (T* ptr : allocations)
-            allocator.deallocate(ptr);
+// Template alias for convenience
+template <typename T>
+using PooledAllocator = H_lib_PooledAllocator<T>;
+
+// Scoped allocator for testing
+template <typename T>
+class ScopedPooledAllocator {
+private:
+    PooledAllocator<T> allocator_;
+    std::unordered_set<T*> allocations_; // faster erase than vector
+
+public:
+    ~ScopedPooledAllocator() {
+        for (T* ptr : allocations_)
+            allocator_.deallocate(ptr);
     }
 
     T* allocate() {
-        T* result = allocator.allocate();
-        allocations.insert(result);
-        return result;
+        T* ptr = allocator_.allocate();
+        allocations_.insert(ptr);
+        return ptr;
     }
 
     void deallocate(T* ptr) {
-        allocator.deallocate(ptr);
-        allocations.erase(ptr);
+        allocator_.deallocate(ptr);
+        allocations_.erase(ptr);
     }
 };
-//---------------------------------------------------------------------------
-} // namespace
-//---------------------------------------------------------------------------
-TEST(TestMallocAllocator, Concept) {
-    struct Foo {
-        Foo(const Foo&) = delete;
-        Foo(Foo&&) = delete;
-        Foo& operator=(const Foo&) = delete;
-        Foo& operator=(Foo&&) = delete;
-    };
-    // You can change EXPECT_TRUE to static_assert in the following lines to
-    // get more detailed error messages that explain why the test fails.
-    EXPECT_TRUE(test::IsAllocator<MallocAllocator<int>>);
-    EXPECT_TRUE(test::IsAllocator<MallocAllocator<Foo>>);
+
+// Dummy struct for testing
+struct Foo {
+    int a;
+    double b;
+};
+
+// -------------------- Google Tests --------------------
+
+TEST(TestPooledAllocator, Concept) {
+    // Check if the allocator satisfies the Allocator concept
+    EXPECT_TRUE((test::IsAllocator<PooledAllocator<int>>));
+    EXPECT_TRUE((test::IsAllocator<PooledAllocator<Foo>>));
 }
-//---------------------------------------------------------------------------
-TEST(TestMallocAllocator, AllocateInt) {
-    ScopedMallocAllocator<int> a;
+
+TEST(TestPooledAllocator, AllocateInt) {
+    ScopedPooledAllocator<int> a;
     int* i = a.allocate();
     EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(int), 0);
     int* j = a.allocate();
     EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(int), 0);
     EXPECT_NE(i, j);
+
+    a.deallocate(i);
+    a.deallocate(j);
 }
-//---------------------------------------------------------------------------
-TEST(TestMallocAllocator, AllocateLargeAlignType) {
+
+TEST(TestPooledAllocator, AllocateLargeAlignType) {
     using LargeAlignType = std::max_align_t;
-    ScopedMallocAllocator<LargeAlignType> a;
+    ScopedPooledAllocator<LargeAlignType> a;
     LargeAlignType* i = a.allocate();
     EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(LargeAlignType), 0);
     LargeAlignType* j = a.allocate();
     EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(LargeAlignType), 0);
     EXPECT_NE(i, j);
+
+    a.deallocate(i);
+    a.deallocate(j);
 }
-//---------------------------------------------------------------------------
-TEST(TestMallocAllocator, AllocateMany) {
-    ScopedMallocAllocator<int> a;
-    unordered_set<int*> pointers;
+
+TEST(TestPooledAllocator, AllocateMany) {
+    ScopedPooledAllocator<int> a;
+    std::unordered_set<int*> pointers;
+
     for (size_t i = 0; i < 1000; ++i) {
         int* p = a.allocate();
-        ASSERT_EQ(pointers.count(p), 0);
+        ASSERT_EQ(pointers.count(p), 0); // ensure uniqueness
         pointers.insert(p);
     }
 }
-//---------------------------------------------------------------------------
+
+TEST(TestPooledAllocator, AllocateAndDeallocate) {
+    ScopedPooledAllocator<Foo> a;
+    std::vector<Foo*> allocated;
+
+    // Allocate 100 objects
+    for (int i = 0; i < 100; ++i) {
+        allocated.push_back(a.allocate());
+    }
+
+    // Deallocate all
+    for (Foo* f : allocated) {
+        a.deallocate(f);
+    }
+
+    allocated.clear();
+
+    // Allocate again to test reuse
+    for (int i = 0; i < 100; ++i) {
+        allocated.push_back(a.allocate());
+    }
+}
