@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <unordered_set>
 #include <gtest/gtest.h>
-#include <gtest.h>
 //---------------------------------------------------------------------------
 using namespace pool;
 using namespace std;
