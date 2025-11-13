@@ -22,7 +22,7 @@ jobs:
           - binary_max_heap
           - indirect_sorting
           - arithmetic_types
-          # - bitset_container
+          - bitset_container
           # - chaining_hash_table
           # - raii_temp_files
           # - arithmetic_ast
