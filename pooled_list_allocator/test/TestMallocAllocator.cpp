@@ -3,19 +3,15 @@
 #include <cstddef>
 #include <memory>
 
-// ✅ Adjust this include if needed
+// Include your allocator header
 #include "lib/MallocAllocator.hpp"
 
-// Detect correct namespace automatically
 namespace pool {
 namespace test {
 
-// Try global namespace first — update this line if MallocAllocator is in a namespace
+// Use the correct namespace for your allocator
 template <typename T>
-using MallocAllocator = ::MallocAllocator<T>;
-
-// If your header defines it as `namespace pool { ... }`, then change the above to:
-// using MallocAllocator = pool::MallocAllocator<T>;
+using MallocAllocator = pool::MallocAllocator<T>;
 
 // ---- Allocator Concept Check ----
 template <typename Alloc>
@@ -51,7 +47,7 @@ private:
     std::vector<T*> allocations;
 };
 
-// Example type
+// Example struct
 struct Foo {
     int x;
     double y;
