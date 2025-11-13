@@ -86,7 +86,7 @@ void fibonacciProgram(unsigned n)
     for (const std::string& instruction : program) {
         std::cout << instruction << std::endl;
     }
-}
+
 //---------------------------------------------------------------------------
 } // namespace simplevm
 //---------------------------------------------------------------------------
