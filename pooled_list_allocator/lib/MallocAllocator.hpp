@@ -1,5 +1,6 @@
 #ifndef H_lib_MallocAllocator
 #define H_lib_MallocAllocator
+#pragma once
 #include <cstdlib>
 #include <new>
 #include <type_traits>
@@ -22,13 +23,12 @@ public:
         using other = MallocAllocator<U>;
     };
 
-    // -------- Constructors --------
     MallocAllocator() noexcept = default;
 
     template <class U>
     MallocAllocator(const MallocAllocator<U>&) noexcept {}
 
-    // -------- Allocate n objects --------
+    // --- Required by STL allocator_traits ---
     pointer allocate(size_type n) {
         if (n == 0) return nullptr;
 
@@ -42,12 +42,19 @@ public:
         return static_cast<pointer>(p);
     }
 
-    // -------- Deallocate n objects --------
     void deallocate(pointer p, size_type) noexcept {
         std::free(p);
     }
 
-    // -------- Comparison --------
+    // --- Required specifically by your unit tests ---
+    pointer allocate() {
+        return allocate(1);
+    }
+
+    void deallocate(pointer p) noexcept {
+        deallocate(p, 1);
+    }
+
     bool operator==(const MallocAllocator&) const noexcept { return true; }
     bool operator!=(const MallocAllocator&) const noexcept { return false; }
 };
