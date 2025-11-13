@@ -4,12 +4,11 @@
 #include <cstdint>
 #include <unordered_set>
 #include <gtest/gtest.h>
-//---------------------------------------------------------------------------
-using namespace pool;
+
 using namespace std;
 
 template <typename T>
-using MallocAllocator = pool::MallocAllocator;
+using MallocAllocator = H_lib::MallocAllocator<T>; 
 //---------------------------------------------------------------------------
 namespace {
 //---------------------------------------------------------------------------
