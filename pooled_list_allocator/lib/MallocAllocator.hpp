@@ -1,48 +1,55 @@
 #ifndef H_lib_MallocAllocator
 #define H_lib_MallocAllocator
-
 #include <cstdlib>
-#include <cstddef>
 #include <new>
 #include <type_traits>
 
 namespace pool {
 
-template<typename T>
-struct MallocAllocator {
+template <typename T>
+class MallocAllocator {
+public:
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
+    using void_pointer = void*;
+    using const_void_pointer = const void*;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
 
+    template <class U>
+    struct rebind {
+        using other = MallocAllocator<U>;
+    };
+
+    // -------- Constructors --------
     MallocAllocator() noexcept = default;
 
-    // Converting constructor so allocators of different T are interconvertible
-    template<typename U>
+    template <class U>
     MallocAllocator(const MallocAllocator<U>&) noexcept {}
 
-    MallocAllocator(const MallocAllocator&) noexcept = default;
-    MallocAllocator(MallocAllocator&&) noexcept = default;
-    MallocAllocator& operator=(const MallocAllocator&) noexcept = default;
-    MallocAllocator& operator=(MallocAllocator&&) noexcept = default;
+    // -------- Allocate n objects --------
+    pointer allocate(size_type n) {
+        if (n == 0) return nullptr;
 
-    template<typename U>
-    struct rebind { using other = MallocAllocator<U>; };
+        if (n > (size_type(-1) / sizeof(T)))
+            throw std::bad_alloc();
 
-    // Allocate storage for one T (uninitialized)
-    T* allocate() {
-        void* p = std::malloc(sizeof(T));
-        if (!p) throw std::bad_alloc();
-        return static_cast<T*>(p);
+        void* p = std::malloc(n * sizeof(T));
+        if (!p)
+            throw std::bad_alloc();
+
+        return static_cast<pointer>(p);
     }
 
-    // Deallocate storage previously returned by allocate()
-    void deallocate(T* p) noexcept {
-        std::free(static_cast<void*>(p));
+    // -------- Deallocate n objects --------
+    void deallocate(pointer p, size_type) noexcept {
+        std::free(p);
     }
+
+    // -------- Comparison --------
+    bool operator==(const MallocAllocator&) const noexcept { return true; }
+    bool operator!=(const MallocAllocator&) const noexcept { return false; }
 };
 
 } // namespace pool
-
-#endif // POOL_MALLOC_ALLOCATOR_HPP
