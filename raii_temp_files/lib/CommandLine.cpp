@@ -41,6 +41,10 @@ void CommandLine::run(const std::string& dir) {
     currentDir = directory;
     std::cout << "Current working directory: " << currentDir << std::endl;
 
+    // Create the base temp directory immediately so an external inotify watcher
+    // (the test) observes the creation event right after the child starts.
+    ensureBaseDirectory();
+
     // Process commands from stdin until "quit"
     std::string line;
     while (std::getline(std::cin, line)) {
