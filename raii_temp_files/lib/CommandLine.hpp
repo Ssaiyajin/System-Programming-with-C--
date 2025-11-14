@@ -38,6 +38,9 @@ private:
     int nextDirIndex = 0;
     std::string currentSubdir;
     bool inSubdir = false;
+
+    // create the base TempDirectory on demand (so the test's inotify watcher can be set up first)
+    void ensureBaseDirectory();
 };
 
 } // namespace raii

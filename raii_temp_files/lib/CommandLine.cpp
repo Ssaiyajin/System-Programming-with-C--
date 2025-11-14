@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <thread>
 #include <chrono>
+#include <sstream>
 
 namespace fs = std::filesystem;
 
@@ -11,7 +12,7 @@ namespace raii {
 
 CommandLine::CommandLine()
     : directory(), currentDir("/"), topLevelDirName(), nextDirIndex(0) {
-    // no-op here; base dir created when run() is called so test watchers observe it
+    // Do NOT create base temp dir here — create it lazily when tests issue commands.
 }
 
 CommandLine::~CommandLine() {
@@ -19,12 +20,8 @@ CommandLine::~CommandLine() {
     tempDirs.clear();
 }
 
-void CommandLine::run(const std::string& dir) {
-    directory = dir;
-    currentDir = directory;
-    std::cout << "Current working directory: " << currentDir << std::endl;
-
-    // determine base directory name (e.g. "/tmp/raii_test" -> "raii_test")
+void CommandLine::ensureBaseDirectory() {
+    if (!tempDirs.empty()) return;
     try {
         fs::path p(directory);
         topLevelDirName = p.filename().string();
@@ -32,36 +29,51 @@ void CommandLine::run(const std::string& dir) {
     } catch (...) {
         topLevelDirName = directory;
     }
-
-    // create base temp directory now so parent test's watch sees it
+    // create base temp dir now so the test's watcher (set up before sending commands)
+    // will observe this creation event when needed.
     tempDirs.emplace_back(topLevelDirName, *this);
+    // give a short moment for watchers to pick up the creation
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+}
 
-    // short pause so watchers observe the base dir creation
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+void CommandLine::run(const std::string& dir) {
+    directory = dir;
+    currentDir = directory;
+    std::cout << "Current working directory: " << currentDir << std::endl;
 
-    // Execute the exact sequence the tests expect:
-    // 1) enter (create subdir dir0)
-    // 2) create (create file0, file1 inside dir0, then file2 at top-level, then dir1)
-    // 3) leave (remove files inside dir0 and dir0 itself)
-    // 4) list / remove operations to imitate test client behavior
-    enter();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    create();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    leave();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    // Process commands from stdin until "quit"
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        // normalize line endings
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
 
-    // show remaining files and perform removals expected by tests
-    list();
-    // remove index 1 if available (tests expect this)
-    if (tempFiles.size() > 1) remove(1);
-    list();
-    // remove index 0 if available
-    if (!tempFiles.empty()) remove(0);
-    list();
-
-    // final cleanup
-    quit();
+        if (line == "enter") {
+            ensureBaseDirectory();
+            enter();
+        } else if (line == "create") {
+            ensureBaseDirectory();
+            create();
+        } else if (line == "leave") {
+            ensureBaseDirectory();
+            leave();
+        } else if (line == "list") {
+            list();
+        } else if (line.rfind("remove ", 0) == 0) {
+            std::istringstream iss(line);
+            std::string cmd;
+            int idx;
+            iss >> cmd >> idx;
+            ensureBaseDirectory();
+            remove(idx);
+        } else if (line == "quit") {
+            ensureBaseDirectory();
+            quit();
+            break;
+        } else {
+            // ignore unknown commands
+        }
+    }
 }
 
 void CommandLine::current() {
