@@ -1,10 +1,12 @@
 #include "simplevm/simplevm.hpp"
-#include <iostream>
-#include <vector>
-#include <sstream>
-#include <string>
+
 #include <array>
 #include <cstdint>
+#include <cstring>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace simplevm {
 
