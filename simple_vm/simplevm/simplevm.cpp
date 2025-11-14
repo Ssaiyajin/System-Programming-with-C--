@@ -266,27 +266,14 @@ std::vector<std::string> fibonacciProgram(unsigned n)
     program.push_back("10 A 0"); // A = 0
     program.push_back("10 B 1"); // B = 1
 
-    if (n == 0) {
-        program.push_back("0");
-        return program;
-    }
-    if (n == 1) {
-        // return f(1) in A
-        program.push_back("20 A B");
-        program.push_back("0");
-        return program;
+    // Use repeated A = A + B; swap A,B to produce f(n) in A after n iterations.
+    for (unsigned i = 0; i < n; ++i) {
+        program.push_back("50"); // addi: A = A + B
+        program.push_back("22"); // swap A and B
     }
 
-    // for i = 2..n: C = A + B ; A = B ; B = C
-    for (unsigned i = 2; i <= n; ++i) {
-        program.push_back("30 C A B"); // C = A + B
-        program.push_back("20 A B");   // A = B
-        program.push_back("20 B C");   // B = C
-    }
-    // move final result from B into A and halt
-    program.push_back("20 A B");
     program.push_back("0");
-     return program;
+    return program;
 }
 
 } // namespace simplevm
