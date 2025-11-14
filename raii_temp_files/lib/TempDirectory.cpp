@@ -1,49 +1,39 @@
 #include "lib/TempDirectory.hpp"
 #include "lib/CommandLine.hpp"
-#include <iostream> // for demo purposes, remove in actual implementation
-#include <filesystem>
+#include <iostream>
 #include <fstream>
+#include <algorithm>
+
 namespace fs = std::filesystem;
-//---------------------------------------------------------------------------
+
 namespace raii {
-//---------------------------------------------------------------------------
 
-TempDirectory::TempDirectory(const std::string& path, raii::CommandLine& cmd)
-    : directoryPath(path), cmdPtr(cmd) {
+TempDirectory::TempDirectory(const std::string& path, CommandLine& cmd)
+    : directoryPath(path), cmdPtr(&cmd) {
     try {
-        fs::path tempDirPath = fs::temp_directory_path() / path;
-        directoryPath = tempDirPath.string();
-        std::cout << "Temporary directory path: " << directoryPath << std::endl;
-
-        // Create the base temporary directory if it doesn't exist.
-        // Do not create child files/dirs here — CommandLine::create() is responsible
-        // for creating dir0/file0/file1/file2/dir1 so the test sees a single set
-        // of create events in a predictable order.
-        if (!fs::exists(directoryPath)) {
-            fs::create_directories(directoryPath);
+        fs::path base = fs::temp_directory_path() / path;
+        directoryPath = base.string();
+        if (!fs::exists(base)) {
+            fs::create_directories(base);
             std::cout << "Created temporary directory: " << directoryPath << std::endl;
         } else {
             std::cout << "Temporary directory already exists: " << directoryPath << std::endl;
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error creating TempDirectory: " << e.what() << std::endl;
+        std::cerr << "TempDirectory ctor error: " << e.what() << std::endl;
         throw;
     }
 }
 
 TempDirectory::~TempDirectory() {
-    if (!directoryPath.empty() && fs::exists(directoryPath)) {
-        try {
-            std::cout << "Removing temporary directory: " << directoryPath << std::endl;
+    try {
+        if (!directoryPath.empty() && fs::exists(directoryPath)) {
             fs::remove_all(directoryPath);
-        } catch (const std::exception& e) {
-            std::cerr << "Error removing directory: " << e.what() << std::endl;
+            std::cout << "Removing temporary directory: " << directoryPath << std::endl;
         }
+    } catch (const std::exception& e) {
+        std::cerr << "TempDirectory dtor error: " << e.what() << std::endl;
     }
-}
-
-std::string TempDirectory::getPath() const {
-    return directoryPath;
 }
 
 void TempDirectory::addFile(const std::string& filePath) {
@@ -55,59 +45,43 @@ void TempDirectory::addDir(const std::string& dirPath) {
 }
 
 void TempDirectory::removeFiles() {
-    // Separate files that live in the base temp directory from nested files
-    std::vector<std::string> topLevelFiles;
-    std::vector<std::string> nestedFiles;
-    for (const auto& file : createdFiles) {
-        try {
-            fs::path p(file);
-            if (p.parent_path() == fs::path(directoryPath)) {
-                topLevelFiles.push_back(file);
-            } else {
-                nestedFiles.push_back(file);
-            }
-        } catch (...) {
-            nestedFiles.push_back(file);
+    // remove nested files first (files whose parent != base)
+    std::string base = fs::path(directoryPath).string();
+    std::vector<std::string> nested, top;
+    for (auto const& f : createdFiles) {
+        if (fs::path(f).parent_path() == fs::path(base)) top.push_back(f);
+        else nested.push_back(f);
+    }
+
+    for (auto const& f : nested) {
+        if (fs::exists(f)) {
+            try { fs::remove(f); std::cout << "Removed file: " << f << std::endl; }
+            catch (const std::exception& e) { std::cerr << "removeFiles error: " << e.what() << std::endl; }
         }
     }
 
-    // Remove nested files first (files inside dir0/dir1)
-    for (const auto& file : nestedFiles) {
-        if (fs::exists(file)a) {
-            try {
-                fs::remove(file);
-                std::cout << "Removed file: " << file << std::endl;
-            } catch (const std::exception& e) {
-                std::cerr << "Error removing file: " << file << " - " << e.what() << std::endl;
-            }
-        }
-    }
-
-    // Remove created subdirectories in creation order (dir0, dir1, ...)
-    for (const auto& d : createdDirs) {
+    // remove tracked dirs (attempt in creation order)
+    for (auto const& d : createdDirs) {
         if (fs::exists(d) && fs::is_directory(d)) {
             try {
                 if (fs::is_empty(d)) {
                     fs::remove(d);
                     std::cout << "Removed directory: " << d << std::endl;
                 } else {
-                    std::cout << "Directory not empty, not removed: " << d << std::endl;
+                    // if not empty, don't remove here
+                    std::cout << "Directory not empty, skipping remove: " << d << std::endl;
                 }
             } catch (const std::exception& e) {
-                std::cerr << "Error removing directory: " << d << " - " << e.what() << std::endl;
+                std::cerr << "removeFiles dir error: " << e.what() << std::endl;
             }
         }
     }
 
-    // Remove top-level files last
-    for (const auto& file : topLevelFiles) {
-        if (fs::exists(file)) {
-            try {
-                fs::remove(file);
-                std::cout << "Removed file: " << file << std::endl;
-            } catch (const std::exception& e) {
-                std::cerr << "Error removing file: " << file << " - " << e.what() << std::endl;
-            }
+    // remove top-level files last
+    for (auto const& f : top) {
+        if (fs::exists(f)) {
+            try { fs::remove(f); std::cout << "Removed file: " << f << std::endl; }
+            catch (const std::exception& e) { std::cerr << "removeFiles top error: " << e.what() << std::endl; }
         }
     }
 
@@ -115,54 +89,38 @@ void TempDirectory::removeFiles() {
     createdDirs.clear();
 }
 
-bool TempDirectory::removeDirectory() {
+bool TempDirectory::removeDirectory() noexcept {
     try {
         if (directoryPath.empty()) return false;
-        if (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath)) {
-            return fs::remove(directoryPath);
+        fs::path p(directoryPath);
+        if (fs::exists(p) && fs::is_directory(p) && fs::is_empty(p)) {
+            return fs::remove(p);
         }
-    } catch (...) {
-        // swallow errors; caller can handle return value
-    }
+    } catch (...) {}
     return false;
 }
 
-void TempDirectory::removePath(const std::string& path) {
+void TempDirectory::removePath(const std::string& path) noexcept {
     try {
         fs::path p(path);
-
-        // Remove file or directory from filesystem
         if (fs::exists(p)) {
-            if (fs::is_directory(p)) {
-                fs::remove_all(p);
-                std::cout << "Removed directory: " << path << std::endl;
-            } else {
-                fs::remove(p);
-                std::cout << "Removed file: " << path << std::endl;
-            }
+            if (fs::is_directory(p)) fs::remove_all(p);
+            else fs::remove(p);
         }
-
-        // Erase matching entries from createdFiles
         createdFiles.erase(std::remove(createdFiles.begin(), createdFiles.end(), path), createdFiles.end());
-
-        // Erase matching entries from createdDirs
         createdDirs.erase(std::remove(createdDirs.begin(), createdDirs.end(), path), createdDirs.end());
 
-        // Also remove any files that were children of this path from createdFiles
-        std::string prefix = fs::path(path).string() + "/";
+        // also remove children from createdFiles / createdDirs
+        std::string prefix = p.string() + "/";
         createdFiles.erase(std::remove_if(createdFiles.begin(), createdFiles.end(),
             [&](const std::string& s){ return s.rfind(prefix, 0) == 0; }), createdFiles.end());
-
-        // Remove any directories under this path from createdDirs
         createdDirs.erase(std::remove_if(createdDirs.begin(), createdDirs.end(),
             [&](const std::string& s){ return s.rfind(prefix, 0) == 0; }), createdDirs.end());
-
     } catch (const std::exception& e) {
-        std::cerr << "Error in removePath(" << path << "): " << e.what() << std::endl;
+        std::cerr << "removePath error: " << e.what() << std::endl;
     }
 }
 
-//---------------------------------------------------------------------------
 } // namespace raii
 //---------------------------------------------------------------------------
 

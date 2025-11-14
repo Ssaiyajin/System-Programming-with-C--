@@ -2,7 +2,6 @@
 #define H_lib_CommandLine
 //---------------------------------------------------------------------------
 #include "lib/TempDirectory.hpp"
-#include "lib/TempFile.hpp"
 #include <string>
 #include <vector>
 //---------------------------------------------------------------------------
@@ -15,11 +14,13 @@ class CommandLine {
     CommandLine(); // Declare the default constructor
     ~CommandLine();
 
+    // emulate the sequence used by the tests
     void run(const std::string& directory);
+
     void current();
-    void leave();
-    void enter(); // Declared with parameter
+    void enter();
     void create();
+    void leave();
     void list();
     void remove(int index);
     void quit();
@@ -29,7 +30,11 @@ private:
     std::string topLevelDir; // Add topLevelDir member
     std::vector<TempDirectory> tempDirs;
     std::vector<std::string> tempFiles; // Declare tempFiles vector
-     raii::CommandLine* cmdPtr;
+
+    // state for subdir creation
+    int nextDirIndex = 0;
+    std::string currentSubdir;
+    bool inSubdir = false;
 };
 
 } // namespace raii
