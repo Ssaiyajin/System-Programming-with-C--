@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
+#include <functional> // added for recursive DFS
 
 namespace binary_heap {
 
@@ -64,22 +65,30 @@ unsigned extract(std::vector<unsigned>& heap) {
 //---------------------------------------------------------------------------
 // Print heap as a dot graph for visualization
 void printDot(std::ostream& out, const std::vector<unsigned>& heap) {
-    if (heap.empty()) {
-        out << "digraph {\n}\n";
-        return;
-    }
-
     out << "digraph {\n";
+
+    // print node labels (same ordering as tests)
     for (size_t i = 0; i < heap.size(); ++i) {
-        out << "\t" << i << " [label=\"" << heap[i] << "\"];\n";
+        out << '\t' << i << " [label=\"" << heap[i] << "\"];\n";
     }
 
-    for (size_t i = 0; i < heap.size(); ++i) {
-        size_t leftChild = 2 * i + 1;
-        size_t rightChild = 2 * i + 2;
+    // print edges in pre-order DFS so the output order matches the expected test order
+    if (!heap.empty()) {
+        std::function<void(size_t)> dfs = [&](size_t idx) {
+            size_t leftChild = 2 * idx + 1;
+            size_t rightChild = 2 * idx + 2;
 
-        if (leftChild < heap.size()) out << "\t" << i << " -> " << leftChild << ";\n";
-        if (rightChild < heap.size()) out << "\t" << i << " -> " << rightChild << ";\n";
+            if (leftChild < heap.size()) {
+                out << '\t' << idx << " -> " << leftChild << ";\n";
+                dfs(leftChild);
+            }
+            if (rightChild < heap.size()) {
+                out << '\t' << idx << " -> " << rightChild << ";\n";
+                dfs(rightChild);
+            }
+        };
+
+        dfs(0);
     }
 
     out << "}\n";
