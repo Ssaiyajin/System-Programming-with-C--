@@ -7,5 +7,4 @@ include(BundledBenchmark)
 
 add_subdirectory(lib)
 add_subdirectory(test)
-add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/thirdparty/benchmark)
-
+add_subdirectory(benchmark)
