@@ -59,16 +59,50 @@ int32_t runVM(const std::vector<std::string>& instructions)
             break;
         }
 
-        // register-to-register move: 20 <Dest> <Src>
+        // register-to-register move or single-arg load into A:
+        // 20 <Dest> <Src>   (two-arg: Dest = Src)
+        // 20 <Src>          (one-arg: A = Src)
         case 20: {
-            char dest, src;
-            if (!(iss >> dest >> src)) break;
-            // integer regs
-            if ((dest >= 'A' && dest <= 'D') && (src >= 'A' && src <= 'D')) {
-                I[idx_int(dest)] = I[idx_int(src)];
-            } else if ((dest >= 'X' && dest <= 'Z') && (src >= 'X' && src <= 'Z')) {
-                F[idx_float(dest)] = F[idx_float(src)];
+            char a, b;
+            if (!(iss >> a)) break;
+            if (iss >> b) {
+                // two-arg move: a = dest, b = src
+                char dest = a, src = b;
+                if ((dest >= 'A' && dest <= 'D') && (src >= 'A' && src <= 'D')) {
+                    I[idx_int(dest)] = I[idx_int(src)];
+                } else if ((dest >= 'X' && dest <= 'W') && (src >= 'X' && src <= 'W')) {
+                    F[idx_float(dest)] = F[idx_float(src)];
+                }
+            } else {
+                // single-arg: load into A from register a
+                char src = a;
+                if (src >= 'A' && src <= 'D') {
+                    I[0] = I[idx_int(src)];
+                } else if (src >= 'X' && src <= 'W') {
+                    // load float src into A by truncation toward zero
+                    I[0] = static_cast<int32_t>(F[idx_float(src)]);
+                }
             }
+            break;
+        }
+
+        // single-arg store A -> <Reg>
+        // 21 <Dest>
+        case 21: {
+            char dest;
+            if (!(iss >> dest)) break;
+            if (dest >= 'A' && dest <= 'D') {
+                I[idx_int(dest)] = I[0];
+            } else if (dest >= 'X' && dest <= 'W') {
+                F[idx_float(dest)] = static_cast<double>(I[0]);
+            }
+            break;
+        }
+
+        // swap A and B
+        // 22
+        case 22: {
+            std::swap(I[0], I[1]);
             break;
         }
 
@@ -81,6 +115,24 @@ int32_t runVM(const std::vector<std::string>& instructions)
                     I[idx_int(dest)] = static_cast<int32_t>(tmp);
                 }
             }
+            break;
+        }
+
+        // float-register helpers:
+        // 31 <DestFReg>  : copy X -> DestFReg
+        case 31: {
+            char dest;
+            if (!(iss >> dest)) break;
+            if (dest >= 'X' && dest <= 'W') {
+                F[idx_float(dest)] = F[0];
+            }
+            break;
+        }
+
+        // swap X and Y
+        // 32
+        case 32: {
+            std::swap(F[0], F[1]);
             break;
         }
 
@@ -146,6 +198,12 @@ int32_t runVM(const std::vector<std::string>& instructions)
             break;
         }
 
+        // 40 itof: convert A (int) -> X (float)
+        case 40: {
+            F[0] = static_cast<double>(I[0]);
+            break;
+        }
+
         // 41 ftoi: convert X (float) -> A (int) by truncation toward zero
         case 41: {
             I[0] = static_cast<int32_t>(F[0]);
@@ -169,18 +227,23 @@ int32_t runVM(const std::string& programText)
     std::istringstream iss(programText);
     std::string line;
     while (std::getline(iss, line)) {
-        // trim trailing/leading spaces simple
+        // trim trailing CR
         if (!line.empty() && (line.back() == '\r')) line.pop_back();
         lines.push_back(line);
     }
     return runVM(lines);
 }
 
-// Convenience default-run that demonstrates a simple program (fibonacci).
+// Default-run: read program from std::cin (used by tests)
 int32_t runVM()
 {
-    auto program = fibonacciProgram(10);
-    return runVM(program);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        if (!line.empty() && (line.back() == '\r')) line.pop_back();
+        lines.push_back(line);
+    }
+    return runVM(lines);
 }
 
 // Produce a Fibonacci program as a sequence of text instructions.
