@@ -12,55 +12,19 @@ TempDirectory::TempDirectory(const std::string& path, raii::CommandLine& cmd)
     : directoryPath(path), cmdPtr(cmd) {
     try {
         fs::path tempDirPath = fs::temp_directory_path() / path;
-        // If 'path' is absolute this will result in 'path'
         directoryPath = tempDirPath.string();
         std::cout << "Temporary directory path: " << directoryPath << std::endl;
 
+        // Create the base temporary directory if it doesn't exist.
+        // Do not create child files/dirs here — CommandLine::create() is responsible
+        // for creating dir0/file0/file1/file2/dir1 so the test sees a single set
+        // of create events in a predictable order.
         if (!fs::exists(directoryPath)) {
             fs::create_directories(directoryPath);
+            std::cout << "Created temporary directory: " << directoryPath << std::endl;
+        } else {
+            std::cout << "Temporary directory already exists: " << directoryPath << std::endl;
         }
-
-        // ensure dir0 exists and register it
-        fs::path dirPath = fs::path(directoryPath) / "dir0";
-        if (!fs::exists(dirPath)) {
-            fs::create_directory(dirPath);
-            std::cout << "Created directory: " << dirPath << std::endl;
-        }
-        createdDirs.push_back(dirPath.string());
-
-        // create file0 and file1 inside dir0
-        fs::path filePath0 = dirPath / "file0";
-        {
-            std::ofstream file0(filePath0);
-        }
-        std::cout << "Created file: " << filePath0 << std::endl;
-        createdFiles.push_back(filePath0.string());
-
-        fs::path filePath1 = dirPath / "file1";
-        {
-            std::ofstream file1(filePath1);
-        }
-        std::cout << "Created file: " << filePath1 << " inside " << dirPath << std::endl;
-        createdFiles.push_back(filePath1.string());
-
-        // create file2 at top level
-        fs::path filePath2 = fs::path(directoryPath) / "file2";
-        {
-            std::ofstream file2(filePath2);
-        }
-        std::cout << "Created file: " << filePath2 << std::endl;
-        createdFiles.push_back(filePath2.string());
-
-        // create dir1 and register it
-        fs::path dir1Path = fs::path(directoryPath) / "dir1";
-        if (!fs::exists(dir1Path)) {
-            fs::create_directory(dir1Path);
-            std::cout << "Created directory: " << dir1Path << std::endl;
-        }
-        createdDirs.push_back(dir1Path.string());
-
-        std::cout << "Created temporary directory: " << directoryPath << std::endl;
-
     } catch (const std::exception& e) {
         std::cerr << "Error creating TempDirectory: " << e.what() << std::endl;
         throw;
