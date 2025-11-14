@@ -103,15 +103,57 @@ bool TempDirectory::removeDirectory() noexcept {
 void TempDirectory::removePath(const std::string& path) noexcept {
     try {
         fs::path p(path);
-        if (fs::exists(p)) {
-            if (fs::is_directory(p)) fs::remove_all(p);
-            else fs::remove(p);
+
+        if (!fs::exists(p)) return;
+
+        if (fs::is_directory(p)) {
+            // Remove tracked files that live directly under this directory in creation order
+            std::vector<std::string> children;
+            for (const auto& f : createdFiles) {
+                try {
+                    if (fs::path(f).parent_path() == p) children.push_back(f);
+                } catch (...) { /* ignore malformed entries */ }
+            }
+            for (const auto& f : children) {
+                if (fs::exists(f) && fs::is_regular_file(f)) {
+                    try {
+                        fs::remove(f);
+                        std::cout << "Removed file: " << f << std::endl;
+                    } catch (const std::exception& e) {
+                        std::cerr << "removePath file error: " << e.what() << std::endl;
+                    }
+                }
+            }
+
+            // attempt to remove the directory itself (prefer remove so dir-delete event follows file deletes)
+            try {
+                if (fs::is_empty(p)) {
+                    fs::remove(p);
+                    std::cout << "Removed directory: " << path << std::endl;
+                } else {
+                    // fallback to recursive remove if something unexpected remains
+                    fs::remove_all(p);
+                    std::cout << "Removed directory (recursive): " << path << std::endl;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "removePath dir error: " << e.what() << std::endl;
+            }
+        } else {
+            // path is a file
+            try {
+                fs::remove(p);
+                std::cout << "Removed file: " << path << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "removePath file error: " << e.what() << std::endl;
+            }
         }
+
+        // Erase exact matches from tracked lists
         createdFiles.erase(std::remove(createdFiles.begin(), createdFiles.end(), path), createdFiles.end());
         createdDirs.erase(std::remove(createdDirs.begin(), createdDirs.end(), path), createdDirs.end());
 
-        // also remove children from createdFiles / createdDirs
-        std::string prefix = p.string() + "/";
+        // Also remove any tracked children entries under this path
+        std::string prefix = fs::path(path).string() + "/";
         createdFiles.erase(std::remove_if(createdFiles.begin(), createdFiles.end(),
             [&](const std::string& s){ return s.rfind(prefix, 0) == 0; }), createdFiles.end());
         createdDirs.erase(std::remove_if(createdDirs.begin(), createdDirs.end(),
