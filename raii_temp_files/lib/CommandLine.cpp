@@ -39,29 +39,53 @@ void CommandLine::enter() {
     }
 }
 void CommandLine::create() {
-    std::string newDir = "/tmp/raii_test/dir0/";
+    // create /tmp/raii_test/dir0 - always recreate to ensure a creation event is emitted
+    std::string dir0 = topLevelDir + "/dir0";
+    std::filesystem::path dir0path(dir0);
+    std::error_code ec;
 
-    std::string file0 = newDir + "file0";
-    std::ofstream outFile0(file0);
-    outFile0.close();
-    tempFiles.push_back(file0);
-    std::cout << "Created file: " << file0 << std::endl;
-
-    std::string file1 = newDir + "file1";
-    std::ofstream outFile1(file1);
-    outFile1.close();
-    tempFiles.push_back(file1);
-    std::cout << "Created file: " << file1 << " inside " << newDir << std::endl;
-
-    leave(); // Ensure leaving dir0 before creating file2
-
-    if (!tempDirs.empty() && tempDirs.back().getPath() == "/tmp/raii_test/dir0") {
-        std::string file2 = "/tmp/raii_test/file2";
-        std::ofstream outFile2(file2);
-        outFile2.close();
-        tempFiles.push_back(file2);
-        std::cout << "Created file: " << file2 << std::endl;
+    // If dir0 exists remove it first to force a create event
+    if (std::filesystem::exists(dir0path)) {
+        std::filesystem::remove_all(dir0path, ec);
+        if (ec) {
+            std::cerr << "Failed to remove existing dir0: " << ec.message() << std::endl;
+        }
     }
+
+    // now create dir0 and register it
+    std::filesystem::create_directory(dir0path, ec);
+    if (!ec && std::filesystem::exists(dir0path)) {
+        std::cout << "Created directory: \"" << dir0 << "\"" << std::endl;
+        if (!tempDirs.empty()) tempDirs.back().addDir(dir0);
+    } else {
+        std::cerr << "Failed to create directory: " << dir0 << " - " << ec.message() << std::endl;
+    }
+
+    // create files inside dir0
+    std::string file0 = dir0 + "/file0";
+    {
+        std::ofstream outFile0(file0);
+    }
+    tempFiles.push_back(file0);
+    if (!tempDirs.empty()) tempDirs.back().addFile(file0);
+    std::cout << "Created file: \"" << file0 << "\"" << std::endl;
+
+    std::string file1 = dir0 + "/file1";
+    {
+        std::ofstream outFile1(file1);
+    }
+    tempFiles.push_back(file1);
+    if (!tempDirs.empty()) tempDirs.back().addFile(file1);
+    std::cout << "Created file: \"" << file1 << "\" inside \"" << dir0 << "\"" << std::endl;
+
+    // create a file at top-level
+    std::string file2 = topLevelDir + "/file2";
+    {
+        std::ofstream outFile2(file2);
+    }
+    tempFiles.push_back(file2);
+    if (!tempDirs.empty()) tempDirs.back().addFile(file2);
+    std::cout << "Created file: \"" << file2 << "\"" << std::endl;
 }
 
 void CommandLine::leave() {
