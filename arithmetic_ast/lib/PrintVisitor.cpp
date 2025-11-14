@@ -57,11 +57,11 @@ void PrintVisitor::visit(Divide& node) {
 }
 
 void PrintVisitor::visit(ast::Power& node) {
-    out << "(";
+    std::cout << "(";
     node.getMutableLeft()->accept(*this);     // base
-    out << " ^ ";
+    std::cout << " ^ ";
     node.getMutableRight()->accept(*this);    // exponent
-    out << ")";
+    std::cout << ")";
 }
 
 void PrintVisitor::visit(Constant& node) {
