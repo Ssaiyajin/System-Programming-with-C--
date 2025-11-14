@@ -19,7 +19,7 @@ jobs:
       matrix:
         project:
           - simple_vm
-          #- binary_max_heap
+          - binary_max_heap
           # - indirect_sorting
           # - arithmetic_types
           # - bitset_container
