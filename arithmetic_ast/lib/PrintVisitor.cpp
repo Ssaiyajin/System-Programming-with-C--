@@ -56,12 +56,12 @@ void PrintVisitor::visit(Divide& node) {
     std::cout << ")";
 }
 
-void PrintVisitor::visit( Power& node) {
-    std::cout << "(";
-    node.getMutableBase()->accept(*this);     // Recursively visit the base
-    std::cout << " ^ ";
-    node.getMutableExponent()->accept(*this); // Recursively visit the exponent
-    std::cout << ")";
+void PrintVisitor::visit(ast::Power& node) {
+    out << "(";
+    node.getMutableLeft()->accept(*this);     // base
+    out << " ^ ";
+    node.getMutableRight()->accept(*this);    // exponent
+    out << ")";
 }
 
 void PrintVisitor::visit(Constant& node) {
