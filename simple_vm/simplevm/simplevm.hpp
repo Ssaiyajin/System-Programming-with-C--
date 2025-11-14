@@ -1,17 +1,17 @@
-#ifndef H_simplevm_simplevm
-#define H_simplevm_simplevm
-//---------------------------------------------------------------------------
+#pragma once
 #include <cstdint>
-//---------------------------------------------------------------------------
+#include <string>
+#include <vector>
+
 namespace simplevm {
-//---------------------------------------------------------------------------
-/// Run the VM. Return the value from register A when the execution finished.
+
+// Execute the given program (list of textual instructions). Returns register A.
+int32_t runVM(const std::vector<std::string>& instructions);
+
+// Convenience runner that builds a small demo program and executes it.
 int32_t runVM();
-//---------------------------------------------------------------------------
-/// Print a VM program that calculates the nth fibonacci number.
-void fibonacciProgram(unsigned n);
-//---------------------------------------------------------------------------
+
+// Produce a fibonacci program as a sequence of textual instructions.
+std::vector<std::string> fibonacciProgram(unsigned n);
+
 } // namespace simplevm
-//---------------------------------------------------------------------------
-#endif
-//---------------------------------------------------------------------------
