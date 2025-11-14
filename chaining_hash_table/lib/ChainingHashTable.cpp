@@ -1,5 +1,7 @@
 #include "lib/ChainingHashTable.hpp"
 #include <cmath>
+#include <cstring>
+#include <memory>
 //---------------------------------------------------------------------------
 namespace hashtable {
 //---------------------------------------------------------------------------
