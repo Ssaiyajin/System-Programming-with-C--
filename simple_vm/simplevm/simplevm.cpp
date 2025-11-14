@@ -163,11 +163,19 @@ int32_t runVM(const std::vector<std::string>& instructions)
         }
         // 54 divi: A = A / B  (detect div by zero)
         case 54: {
-            if (I[1] == 0) {
-                std::cerr << "division by 0\n";
-            } else {
-                // C++ integer division truncates toward zero, use that behaviour
-                I[0] = static_cast<int32_t>(I[0] / I[1]);
+            {
+                int32_t a = I[0];
+                int32_t b = I[1];
+                if (b == 0) {
+                    // tests capture stdout
+                    std::cout << "division by 0\n";
+                } else {
+                    // compute quotient and remainder from originals
+                    int32_t q = static_cast<int32_t>(a / b);
+                    int32_t r = static_cast<int32_t>(a % b);
+                    I[0] = q;
+                    I[1] = r;
+                }
             }
             break;
         }
@@ -191,7 +199,8 @@ int32_t runVM(const std::vector<std::string>& instructions)
         // 63 divf: X = X / Y (detect div by zero)
         case 63: {
             if (F[1] == 0.0) {
-                std::cerr << "division by 0\n";
+                // tests capture stdout
+                std::cout << "division by 0\n";
             } else {
                 F[0] = F[0] / F[1];
             }
@@ -262,6 +271,8 @@ std::vector<std::string> fibonacciProgram(unsigned n)
         return program;
     }
     if (n == 1) {
+        // return f(1) in A
+        program.push_back("20 A B");
         program.push_back("0");
         return program;
     }
@@ -272,8 +283,10 @@ std::vector<std::string> fibonacciProgram(unsigned n)
         program.push_back("20 A B");   // A = B
         program.push_back("20 B C");   // B = C
     }
+    // move final result from B into A and halt
+    program.push_back("20 A B");
     program.push_back("0");
-    return program;
+     return program;
 }
 
 } // namespace simplevm
