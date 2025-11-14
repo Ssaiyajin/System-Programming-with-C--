@@ -54,16 +54,10 @@ jobs:
           set -euo pipefail
           cmake --build "build_${{ matrix.project }}" -- -j$(nproc)
 
-      - name: Run tests (ctest if available)
+      - name: Run tests (if test executable exists)
+        working-directory: "build_${{ matrix.project }}"
         run: |
-          set -euo pipefail
-          if [ -f "build_${{ matrix.project }}/CTestTestfile.cmake" ]; then
-            cd "build_${{ matrix.project }}"
-            # Run tests and fail the job if tests fail
-            ctest --output-on-failure -j$(nproc)
-          else
-            echo "No ctest configuration found for ${{ matrix.project }} — skipping ctest"
-          fi
+          ./test/tester  # runs your test executable
 
   lint:
     name: Lint - ${{ matrix.project }}
