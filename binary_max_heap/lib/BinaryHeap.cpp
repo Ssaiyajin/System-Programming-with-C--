@@ -1,90 +1,93 @@
 #include "BinaryHeap.hpp"
-#include <vector>
+
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
-#include <algorithm>
-#include <functional> // added for recursive DFS
+#include <vector>
+#include <functional>
 
 namespace binary_heap {
 
-//---------------------------------------------------------------------------
-// Insert a value into the heap
-void insert(std::vector<unsigned>& heap, unsigned value) {
-    heap.push_back(value); // Add to the end
-    int index = heap.size() - 1;
+// Insert a value into the max-heap.
+// Complexity: O(log n)
+void insert(std::vector<unsigned>& heap, unsigned value) noexcept {
+    heap.push_back(value);
+    std::size_t idx = heap.size() - 1;
 
-    // Bubble up
-    while (index > 0) {
-        int parent = (index - 1) / 2;
-        if (heap[index] > heap[parent]) {
-            std::swap(heap[index], heap[parent]);
-            index = parent;
-        } else {
+    while (idx > 0) {
+        std::size_t parent = (idx - 1) / 2;
+        if (heap[idx] <= heap[parent])
             break;
-        }
+        std::swap(heap[idx], heap[parent]);
+        idx = parent;
     }
 }
 
-//---------------------------------------------------------------------------
-// Extract the maximum value from the heap
+// Extract the maximum value from the heap.
+// Throws std::runtime_error when heap is empty.
+// Complexity: O(log n)
 unsigned extract(std::vector<unsigned>& heap) {
     if (heap.empty()) {
-        throw std::runtime_error("Heap is empty");
+        throw std::runtime_error("extract from empty heap");
     }
 
-    unsigned root = heap[0];
+    unsigned root = heap.front();
+
+    if (heap.size() == 1) {
+        heap.pop_back();
+        return root;
+    }
+
+    // Move last element to root and restore heap property.
     heap[0] = heap.back();
     heap.pop_back();
 
-    int index = 0;
-    int heapSize = heap.size();
+    std::size_t idx = 0;
+    const std::size_t n = heap.size();
 
-    // Bubble down
     while (true) {
-        int largest = index;
-        int leftChild = 2 * index + 1;
-        int rightChild = 2 * index + 2;
+        std::size_t left = 2 * idx + 1;
+        std::size_t right = 2 * idx + 2;
+        std::size_t largest = idx;
 
-        if (leftChild < heapSize && heap[leftChild] > heap[largest])
-            largest = leftChild;
+        if (left < n && heap[left] > heap[largest]) largest = left;
+        if (right < n && heap[right] > heap[largest]) largest = right;
 
-        if (rightChild < heapSize && heap[rightChild] > heap[largest])
-            largest = rightChild;
+        if (largest == idx) break;
 
-        if (largest != index) {
-            std::swap(heap[index], heap[largest]);
-            index = largest;
-        } else {
-            break;
-        }
+        std::swap(heap[idx], heap[largest]);
+        idx = largest;
     }
 
     return root;
 }
 
-//---------------------------------------------------------------------------
-// Print heap as a dot graph for visualization
+// Print heap as a dot graph. The output ordering of edges follows a
+// pre-order traversal where for each node we print the left edge and
+// descend the left subtree, then print the right edge and descend the
+// right subtree. This ordering matches the expectations in the tests.
 void printDot(std::ostream& out, const std::vector<unsigned>& heap) {
     out << "digraph {\n";
 
-    // print node labels (same ordering as tests)
-    for (size_t i = 0; i < heap.size(); ++i) {
+    // Node labels (index -> value)
+    for (std::size_t i = 0; i < heap.size(); ++i) {
         out << '\t' << i << " [label=\"" << heap[i] << "\"];\n";
     }
 
-    // print edges in pre-order DFS so the output order matches the expected test order
+    // Recursive pre-order traversal that prints an edge to the left child,
+    // recurses left, then prints an edge to the right child and recurses right.
     if (!heap.empty()) {
-        std::function<void(size_t)> dfs = [&](size_t idx) {
-            size_t leftChild = 2 * idx + 1;
-            size_t rightChild = 2 * idx + 2;
+        std::function<void(std::size_t)> dfs = [&](std::size_t idx) {
+            std::size_t left = 2 * idx + 1;
+            std::size_t right = 2 * idx + 2;
 
-            if (leftChild < heap.size()) {
-                out << '\t' << idx << " -> " << leftChild << ";\n";
-                dfs(leftChild);
+            if (left < heap.size()) {
+                out << '\t' << idx << " -> " << left << ";\n";
+                dfs(left);
             }
-            if (rightChild < heap.size()) {
-                out << '\t' << idx << " -> " << rightChild << ";\n";
-                dfs(rightChild);
+            if (right < heap.size()) {
+                out << '\t' << idx << " -> " << right << ";\n";
+                dfs(right);
             }
         };
 
