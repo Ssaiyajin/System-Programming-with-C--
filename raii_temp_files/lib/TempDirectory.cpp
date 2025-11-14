@@ -91,8 +91,25 @@ void TempDirectory::addDir(const std::string& dirPath) {
 }
 
 void TempDirectory::removeFiles() {
-    // remove files (reverse order isn't necessary but keep predictable order)
+    // Separate files that live in the base temp directory from nested files
+    std::vector<std::string> topLevelFiles;
+    std::vector<std::string> nestedFiles;
     for (const auto& file : createdFiles) {
+        try {
+            fs::path p(file);
+            if (p.parent_path() == fs::path(directoryPath)) {
+                topLevelFiles.push_back(file);
+            } else {
+                nestedFiles.push_back(file);
+            }
+        } catch (...) {
+            // on error, treat as nested to try removal below
+            nestedFiles.push_back(file);
+        }
+    }
+
+    // Remove nested files first (files inside dir0/dir1)
+    for (const auto& file : nestedFiles) {
         if (fs::exists(file)) {
             try {
                 fs::remove(file);
@@ -104,9 +121,8 @@ void TempDirectory::removeFiles() {
             std::cerr << "File not found: " << file << std::endl;
         }
     }
-    createdFiles.clear();
 
-    // attempt to remove created subdirectories if they are empty (reverse order)
+    // Attempt to remove created subdirectories if they are empty (reverse order)
     for (auto it = createdDirs.rbegin(); it != createdDirs.rend(); ++it) {
         const auto& d = *it;
         if (fs::exists(d) && fs::is_directory(d)) {
@@ -122,6 +138,22 @@ void TempDirectory::removeFiles() {
             }
         }
     }
+
+    // Remove top-level files last
+    for (const auto& file : topLevelFiles) {
+        if (fs::exists(file)) {
+            try {
+                fs::remove(file);
+                std::cout << "Removed file: " << file << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "Error removing file: " << file << " - " << e.what() << std::endl;
+            }
+        } else {
+            std::cerr << "File not found: " << file << std::endl;
+        }
+    }
+
+    createdFiles.clear();
     createdDirs.clear();
 }
 
