@@ -34,6 +34,8 @@ public:
     void optimize(std::unique_ptr<ASTNode>& thisRef) override;
     void accept(ASTVisitor& visitor) override;
     std::unique_ptr<ASTNode>& getMutableInput();
+    ASTNode& getInput();
+    const ASTNode& getInput() const;
 private:
     std::unique_ptr<ASTNode> childNode;
 };
@@ -47,6 +49,8 @@ public:
     void optimize(std::unique_ptr<ASTNode>& thisRef) override;
     void accept(ASTVisitor& visitor) override;
     std::unique_ptr<ASTNode>& getMutableInput();
+    ASTNode& getInput();
+    const ASTNode& getInput() const;
 private:
     std::unique_ptr<ASTNode> childNode;
 };
