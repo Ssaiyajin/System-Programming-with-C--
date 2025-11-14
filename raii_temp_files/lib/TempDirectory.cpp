@@ -103,7 +103,6 @@ void TempDirectory::removeFiles() {
                 nestedFiles.push_back(file);
             }
         } catch (...) {
-            // on error, treat as nested to try removal below
             nestedFiles.push_back(file);
         }
     }
@@ -117,14 +116,11 @@ void TempDirectory::removeFiles() {
             } catch (const std::exception& e) {
                 std::cerr << "Error removing file: " << file << " - " << e.what() << std::endl;
             }
-        } else {
-            std::cerr << "File not found: " << file << std::endl;
         }
     }
 
-    // Attempt to remove created subdirectories if they are empty (reverse order)
-    for (auto it = createdDirs.rbegin(); it != createdDirs.rend(); ++it) {
-        const auto& d = *it;
+    // Remove created subdirectories in creation order (dir0, dir1, ...)
+    for (const auto& d : createdDirs) {
         if (fs::exists(d) && fs::is_directory(d)) {
             try {
                 if (fs::is_empty(d)) {
@@ -148,8 +144,6 @@ void TempDirectory::removeFiles() {
             } catch (const std::exception& e) {
                 std::cerr << "Error removing file: " << file << " - " << e.what() << std::endl;
             }
-        } else {
-            std::cerr << "File not found: " << file << std::endl;
         }
     }
 
