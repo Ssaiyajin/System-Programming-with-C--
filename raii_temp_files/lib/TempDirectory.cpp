@@ -73,7 +73,7 @@ void TempDirectory::removeFiles() {
 
     // Remove nested files first (files inside dir0/dir1)
     for (const auto& file : nestedFiles) {
-        if (fs::exists(file)) {
+        if (fs::exists(file)a) {
             try {
                 fs::remove(file);
                 std::cout << "Removed file: " << file << std::endl;
