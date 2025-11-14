@@ -19,6 +19,7 @@ namespace raii {
         std::string getPath() const;
         void addFile(const std::string& filePath);
         void addDir(const std::string& dirPath);
+        void removePath(const std::string& path);
         void removeFiles(); // remove created files and attempt to remove created subdirs
         bool isEmpty() const {
             return std::filesystem::is_empty(directoryPath);

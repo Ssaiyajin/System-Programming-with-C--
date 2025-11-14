@@ -127,6 +127,41 @@ bool TempDirectory::removeDirectory() {
     return false;
 }
 
+void TempDirectory::removePath(const std::string& path) {
+    try {
+        fs::path p(path);
+
+        // Remove file or directory from filesystem
+        if (fs::exists(p)) {
+            if (fs::is_directory(p)) {
+                fs::remove_all(p);
+                std::cout << "Removed directory: " << path << std::endl;
+            } else {
+                fs::remove(p);
+                std::cout << "Removed file: " << path << std::endl;
+            }
+        }
+
+        // Erase matching entries from createdFiles
+        createdFiles.erase(std::remove(createdFiles.begin(), createdFiles.end(), path), createdFiles.end());
+
+        // Erase matching entries from createdDirs
+        createdDirs.erase(std::remove(createdDirs.begin(), createdDirs.end(), path), createdDirs.end());
+
+        // Also remove any files that were children of this path from createdFiles
+        std::string prefix = fs::path(path).string() + "/";
+        createdFiles.erase(std::remove_if(createdFiles.begin(), createdFiles.end(),
+            [&](const std::string& s){ return s.rfind(prefix, 0) == 0; }), createdFiles.end());
+
+        // Remove any directories under this path from createdDirs
+        createdDirs.erase(std::remove_if(createdDirs.begin(), createdDirs.end(),
+            [&](const std::string& s){ return s.rfind(prefix, 0) == 0; }), createdDirs.end());
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error in removePath(" << path << "): " << e.what() << std::endl;
+    }
+}
+
 //---------------------------------------------------------------------------
 } // namespace raii
 //---------------------------------------------------------------------------
