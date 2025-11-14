@@ -1,56 +1,61 @@
 #include "lib/ChainingHashTable.hpp"
-
-#include <functional>
-#include <algorithm>
-
-namespace hashtable {
-
+#include <cmath>
 //---------------------------------------------------------------------------
-// Constructor: pick a small default bucket count and reserve buckets.
-ChainingHashTable::ChainingHashTable()
-    : numEntries(0), numBuckets(8), buckets(numBuckets)
-{}
-
+namespace hashtable {
+//---------------------------------------------------------------------------
+// Constructor
+ChainingHashTable::ChainingHashTable() : numEntries(0) {}
 // Move constructor
 ChainingHashTable::ChainingHashTable(ChainingHashTable&& other) noexcept
     : buckets(std::move(other.buckets)),
-      numEntries(other.numEntries),
-      numBuckets(other.numBuckets)
-{
-    other.numEntries = 0;
+      numEntries(other.numEntries) {
     other.numBuckets = 0;
 }
 
-// Destructor
-ChainingHashTable::~ChainingHashTable() = default;
+
+ChainingHashTable::~ChainingHashTable() {
+    // Clear each list in the bucket
+    for (auto& entryList : buckets) {
+        entryList.clear();  // Or use smart pointers to automatically manage memory
+    }
+    buckets.clear();  // Clear the entire container
+}
 
 ChainingHashTable& ChainingHashTable::operator=(ChainingHashTable&& other) noexcept {
     if (this != &other) {
+        // Release current resources
+        buckets.clear();
+
+        // Move resources from 'other'
         buckets = std::move(other.buckets);
         numEntries = other.numEntries;
         numBuckets = other.numBuckets;
 
+        // Reset 'other'
         other.numEntries = 0;
         other.numBuckets = 0;
     }
     return *this;
 }
-
 void ChainingHashTable::rehash() {
-    size_t newSize = std::max<size_t>(1, numBuckets * 2);
+    size_t newSize = numBuckets * 2;
     BucketContainer newBuckets(newSize);
 
-    // Move each entry into the new bucket vector
     for (auto& bucketList : buckets) {
-        for (auto& entry : bucketList) {
+        auto entryIt = bucketList.begin();
+        while (entryIt != bucketList.end()) {
+            Entry entry = std::move(*entryIt);
+            entryIt = bucketList.erase(entryIt);
             size_t index = hash(entry.key, newSize);
             newBuckets[index].push_back(std::move(entry));
         }
     }
 
-    // Replace buckets and update count
+    // Clear the old buckets after moving elements
+    buckets.clear();
+
+    // Assign the new buckets to the current object
     buckets = std::move(newBuckets);
-    numBuckets = newSize;
 }
 
 size_t ChainingHashTable::hash(int64_t key, size_t size) const {
@@ -62,169 +67,201 @@ size_t ChainingHashTable::size() const {
 }
 
 bool ChainingHashTable::contains(int64_t key) const {
-    if (numBuckets == 0 || buckets.empty()) return false;
     size_t index = hash(key, numBuckets);
-    const auto& bucket = buckets[index];
-    for (const auto& e : bucket) {
-        if (e.key == key) return true;
+    auto& bucket = buckets[index];
+    auto entry = bucket.begin();
+    while (entry != bucket.end())
+    {
+        if (entry->key == key)
+        {
+            return true;
+        }
+        ++entry;
     }
     return false;
 }
 
 GenericValue& ChainingHashTable::operator[](int64_t key) {
-    if (numBuckets == 0) {
-        numBuckets = 8;
-        buckets.resize(numBuckets);
-    } else if (buckets.empty()) {
+    if (buckets.empty()) {
         buckets.resize(numBuckets);
     }
-
     size_t index = hash(key, numBuckets);
     auto& bucket = buckets[index];
-
-    for (auto& entry : bucket) {
-        if (entry.key == key) {
-            return entry.value;
+    auto entry = bucket.begin();
+    while (!bucket.empty())
+    {
+        if (entry->key == key)
+        {
+            return entry->value;
         }
+        ++entry; // Move to the next entry in the bucket
     }
-
-    // not found -> insert default
-    bucket.emplace_back(key, GenericValue{});
-    ++numEntries;
-    if (numEntries > numBuckets * LOAD_FACTOR_THRESHOLD) rehash();
-    return bucket.back().value;
+    return insert(key, GenericValue()); // Create a new entry with a default value
 }
 
+
 GenericValue& ChainingHashTable::insert(int64_t key, GenericValue&& value) {
-    if (numBuckets == 0) {
-        numBuckets = 8;
-        buckets.resize(numBuckets);
-    } else if (buckets.empty()) {
+    if (buckets.empty()) {
         buckets.resize(numBuckets);
     }
 
     size_t index = hash(key, numBuckets);
     auto& bucket = buckets[index];
 
-    for (auto& entry : bucket) {
-        if (entry.key == key) {
-            entry.value = std::move(value);
-            return entry.value;
+    // Use auto for iterator type
+    for (auto entryIt = bucket.begin(); entryIt != bucket.end(); ++entryIt) {
+        if (entryIt->key == key) {
+            return entryIt->value;
         }
     }
 
+    // Use emplace_back to construct the Entry in-place
     bucket.emplace_back(key, std::move(value));
-    ++numEntries;
-    if (numEntries > numBuckets * LOAD_FACTOR_THRESHOLD) rehash();
+
+    numEntries++;
+
+    if (numEntries > numBuckets * LOAD_FACTOR_THRESHOLD) {
+        rehash();
+    }
+
+    // Return a reference to the newly inserted value
     return bucket.back().value;
 }
 
 void ChainingHashTable::erase(int64_t key) {
-    if (numBuckets == 0 || buckets.empty()) return;
     size_t index = hash(key, numBuckets);
     auto& bucket = buckets[index];
 
-    for (auto it = bucket.begin(); it != bucket.end(); ++it) {
-        if (it->key == key) {
-            bucket.erase(it);
+    auto entry = bucket.begin();
+    Entry* prev = nullptr;
+
+    while (entry != bucket.end()) {
+        if (entry->key == key) {
+            if (prev != nullptr) {
+                if (std::next(entry) != bucket.end()) {
+                    // Move data instead of pointer
+                    prev->value = std::move(entry->value);
+                }
+                entry = bucket.erase(entry);  // Update iterator after erasing
+            } else {
+                if (!bucket.empty()) {
+                    // If prev is null, we are at the first element
+                    if (std::next(entry) != bucket.end()) {
+                        // Move data instead of pointer
+                        std::next(entry)->value = std::move(entry->value);
+                    }
+                    entry = bucket.erase(entry);  // Update iterator after erasing
+                } else {
+                    // Handle the case where the bucket is empty
+                    --numEntries;
+                    return;
+                }
+            }
+
             --numEntries;
             return;
         }
+        prev = &(*entry);
+        ++entry;
     }
 }
 
-//-------------------------- iterator ------------------------------------
-// Note: iterator implementation depends on header layout. Keep existing
-// iterator method signatures but provide safe, simple implementations.
+
+
+//--------------------------iterator------------------------------------
+
 
 ChainingHashTable::iterator::iterator()
-    : container(nullptr), bucketIndex(0), entryIterator()
-{}
+    : container(nullptr), bucketIndex(0), entryIterator(nullptr) {}
 
-ChainingHashTable::iterator::iterator(BucketContainer* c, size_t bi, std::list<Entry>::iterator it)
-    : container(c), bucketIndex(bi), entryIterator(it)
-{}
+ChainingHashTable::iterator::iterator(BucketContainer* c, size_t bi, Entry* it)
+    : container(c), bucketIndex(bi), entryIterator(it) {}
+
 
 ChainingHashTable::iterator ChainingHashTable::begin() {
-    if (buckets.empty()) return end();
-    for (size_t i = 0; i < buckets.size(); ++i) {
-        if (!buckets[i].empty()) {
-            return iterator(&buckets, i, buckets[i].begin());
-        }
+    size_t index = 0;
+    while (index < numBuckets && buckets[index].empty()) {
+        ++index;
     }
-    return end();
+    return iterator(&buckets, index, (index < numBuckets) ? &buckets[index].front() : nullptr);
 }
 
 ChainingHashTable::iterator ChainingHashTable::end() {
-    return iterator(&buckets, buckets.size(), std::list<Entry>::iterator{});
+    return iterator(&buckets, numBuckets, nullptr);
 }
 
 ChainingHashTable::iterator ChainingHashTable::find(int64_t key) {
-    if (buckets.empty()) return end();
+    if (buckets.empty()) {
+        return end();
+    }
+
     size_t index = hash(key, numBuckets);
-    for (auto it = buckets[index].begin(); it != buckets[index].end(); ++it) {
-        if (it->key == key) {
-            return iterator(&buckets, index, it);
+    for (Entry& entry : buckets[index]) {
+        if (entry.key == key) {
+            return iterator(&buckets, index, &entry);
         }
     }
+
     return end();
 }
-
-// iterator pre-increment
 ChainingHashTable::iterator& ChainingHashTable::iterator::operator++() {
-    if (!container) return *this;
-    if (bucketIndex >= container->size()) {
-        entryIterator = std::list<Entry>::iterator{};
-        return *this;
+    if (entryIterator) {
+        entryIterator = entryIterator->test.get();
     }
-
-    auto& bucket = container->at(bucketIndex);
-    if (entryIterator != bucket.end()) ++entryIterator;
-
-    // if we reached end of current bucket, find next non-empty bucket
-    while ((entryIterator == bucket.end()) && (++bucketIndex < container->size())) {
-        auto& nb = container->at(bucketIndex);
-        if (!nb.empty()) {
-            entryIterator = nb.begin();
-            return *this;
-        }
-    }
-
-    if (bucketIndex >= container->size()) {
-        // set to end
-        entryIterator = std::list<Entry>::iterator{};
+    if (!entryIterator) {
+        next();
     }
     return *this;
 }
 
 void ChainingHashTable::iterator::next() {
-    ++(*this);
+    while (bucketIndex < container->size() && container->at(bucketIndex).empty()) {
+        ++bucketIndex;
+    }
+
+    if (bucketIndex < container->size()) {
+        entryIterator = &container->at(bucketIndex).front();
+
+        // Move to the next entry in the bucket
+        if (entryIterator) {
+            entryIterator = entryIterator->test.get();
+        }
+
+        // Skip empty buckets
+        while (!entryIterator && bucketIndex < container->size() - 1) {
+            ++bucketIndex;
+            if (bucketIndex < container->size()) {
+                entryIterator = &container->at(bucketIndex).front();
+            }
+        }
+    } else {
+        // End of container
+        entryIterator = nullptr;
+    }
 }
 
 ChainingHashTable::iterator ChainingHashTable::iterator::operator++(int) {
-    iterator tmp = *this;
+    iterator temp = *this;
     ++(*this);
-    return tmp;
+    return temp;
 }
-
 ChainingHashTable::iterator::reference ChainingHashTable::iterator::operator*() const {
     return *entryIterator;
 }
 
 ChainingHashTable::iterator::pointer ChainingHashTable::iterator::operator->() const {
-    return &(*entryIterator);
-}
-
+    return entryIterator;
+} 
 bool ChainingHashTable::iterator::operator==(const iterator& other) const {
-    return container == other.container && bucketIndex == other.bucketIndex &&
-           (container == nullptr || entryIterator == other.entryIterator);
-}
+    return container == other.container && bucketIndex == other.bucketIndex && entryIterator == other.entryIterator;
+   }
 
 bool ChainingHashTable::iterator::operator!=(const iterator& other) const {
     return !(*this == other);
 }
-
+//---------------------------------------------------------------------------
 } // namespace hashtable
+//---------------------------------------------------------------------------
 
 
 
