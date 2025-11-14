@@ -31,13 +31,18 @@ std::unique_ptr<ASTNode>& UnaryPlus::getMutableInput() { return childNode; }
 ASTNode& UnaryPlus::getInput() { return *childNode; }
 const ASTNode& UnaryPlus::getInput() const { return *childNode; }
 void UnaryPlus::optimize(std::unique_ptr<ASTNode>& thisRef) {
-    if (childNode) childNode->optimize(childNode);
-    // +(+x) => +x  and +param => param (simple flatten)
-    if (childNode) {
-        if (childNode->getType() == ASTNode::Type::UnaryPlus) {
-            thisRef = std::move(childNode);
-        }
+    if (!childNode) return;
+
+    // Flatten +(+x) -> +x and +const/param -> child (preserve pointer identity)
+    if (childNode->getType() == ASTNode::Type::UnaryPlus
+        || childNode->getType() == ASTNode::Type::Constant
+        || childNode->getType() == ASTNode::Type::Parameter) {
+        thisRef = std::move(childNode);
+        return;
     }
+
+    // Otherwise optimize child in-place
+    childNode->optimize(childNode);
 }
 
 // --- UnaryMinus ----------------------------------------------------------
@@ -68,17 +73,25 @@ void UnaryMinus::optimize(std::unique_ptr<ASTNode>& thisRef) {
         return;
     }
 
-    // -(a - b) -> b - a  (handle only when child is Subtract)
+    // -( ( -a ) - b ) -> b + a
     if (childNode->getType() == ASTNode::Type::Subtract) {
         auto sub = static_cast<Subtract*>(childNode.get());
-        auto L = sub->releaseLeft();
-        auto R = sub->releaseRight();
+        auto L = sub->releaseLeft();   // owns left
+        auto R = sub->releaseRight();  // owns right
+
+        // if left was unary minus: (-a) - b  => b + a
+        if (L && L->getType() == ASTNode::Type::UnaryMinus) {
+            auto inner = std::move(static_cast<UnaryMinus*>(L.get())->getMutableInput());
+            thisRef = std::make_unique<Add>(std::move(R), std::move(inner));
+            return;
+        }
+
+        // default: -(a - b) -> b - a
         thisRef = std::make_unique<Subtract>(std::move(R), std::move(L));
         return;
     }
 
-    // default: keep unary minus
-    // already child optimized
+    // default: keep unary minus (child already optimized)
 }
 
 // --- BinaryASTNode -------------------------------------------------------
@@ -230,6 +243,16 @@ void Divide::optimize(std::unique_ptr<ASTNode>& thisRef) {
     if (getMutableLeft()) getMutableLeft()->optimize(getMutableLeft());
     if (getMutableRight()) getMutableRight()->optimize(getMutableRight());
 
+    // 0 / x -> 0 (even if x not known)
+    if (getLeft().getType() == ASTNode::Type::Constant) {
+        double a = static_cast<Constant*>(&getLeft())->getValue();
+        if (a == 0.0) {
+            thisRef = std::make_unique<Constant>(0.0);
+            return;
+        }
+    }
+
+    // both constants
     if (getLeft().getType() == ASTNode::Type::Constant && getRight().getType() == ASTNode::Type::Constant) {
         double a = static_cast<Constant*>(&getLeft())->getValue();
         double b = static_cast<Constant*>(&getRight())->getValue();
@@ -251,6 +274,20 @@ void Divide::optimize(std::unique_ptr<ASTNode>& thisRef) {
         thisRef = std::make_unique<Divide>(std::move(Linner), std::move(Rinner));
         return;
     }
+
+    // Convert a / c -> a * (1 / c) to allow further multiply optimizations
+    {
+        auto L = releaseLeft();
+        auto R = releaseRight();
+        if (L && R) {
+            auto one = std::make_unique<Constant>(1.0);
+            auto inv = std::make_unique<Divide>(std::move(one), std::move(R));
+            thisRef = std::make_unique<Multiply>(std::move(L), std::move(inv));
+            return;
+        }
+    }
+
+    // otherwise keep as-is
 }
 
 // --- Power ---------------------------------------------------------------
@@ -263,12 +300,30 @@ void Power::optimize(std::unique_ptr<ASTNode>& thisRef) {
     if (getMutableLeft()) getMutableLeft()->optimize(getMutableLeft());
     if (getMutableRight()) getMutableRight()->optimize(getMutableRight());
 
+    // both constants
     if (getLeft().getType() == ASTNode::Type::Constant && getRight().getType() == ASTNode::Type::Constant) {
         double a = static_cast<Constant*>(&getLeft())->getValue();
         double b = static_cast<Constant*>(&getRight())->getValue();
         thisRef = std::make_unique<Constant>(std::pow(a,b));
+        return;
     }
-}
 
-} // namespace ast
+    // exponent == 0 -> 1
+    if (getRight().getType() == ASTNode::Type::Constant) {
+        double b = static_cast<Constant*>(&getRight())->getValue();
+        if (b == 0.0) { thisRef = std::make_unique<Constant>(1.0); return; }
+        if (b == 1.0) { thisRef = releaseLeft(); return; }
+        if (b == -1.0) { auto base = releaseLeft(); thisRef = std::make_unique<Divide>(std::make_unique<Constant>(1.0), std::move(base)); return; }
+    }
+
+    // base == 0 -> 0
+    if (getLeft().getType() == ASTNode::Type::Constant) {
+        double a = static_cast<Constant*>(&getLeft())->getValue();
+        if (a == 0.0) { thisRef = std::make_unique<Constant>(0.0); return; }
+        if (a == 1.0) { thisRef = std::make_unique<Constant>(1.0); return; }
+    }
+
+    // otherwise keep as-is (children already optimized)
+}
 //---------------------------------------------------------------------------
+} // namespace ast
