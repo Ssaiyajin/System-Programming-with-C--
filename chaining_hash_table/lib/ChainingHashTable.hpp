@@ -1,34 +1,22 @@
 #ifndef H_lib_ChainingHashTable
 #define H_lib_ChainingHashTable
 //---------------------------------------------------------------------------
-
 #include "lib/GenericValue.hpp"
 #include <cstdint>
 #include <cstddef>
 #include <vector>
 #include <list>
 #include <iterator>
-#include <functional>
-#include <utility>
-
+#include <memory>
+#include <type_traits>
 //---------------------------------------------------------------------------
-
 namespace hashtable {
 //---------------------------------------------------------------------------
 
 struct HashEntry {
     const int64_t key;
     GenericValue value;
-
     HashEntry(int64_t k, GenericValue&& v) : key(k), value(std::move(v)) {}
-
-    // disable copy (GenericValue is non-copyable)
-    HashEntry(const HashEntry&) = delete;
-    HashEntry& operator=(const HashEntry&) = delete;
-
-    // allow move
-    HashEntry(HashEntry&& other) noexcept : key(other.key), value(std::move(other.value)) {}
-    HashEntry& operator=(HashEntry&&) = default;
 };
 
 class ChainingHashTable {
@@ -37,6 +25,7 @@ public:
     using Bucket = std::list<Entry>;
     using BucketContainer = std::vector<Bucket>;
     using BucketIterator = typename Bucket::iterator;
+    using ConstBucketIterator = typename Bucket::const_iterator;
 
 private:
     BucketContainer buckets;
@@ -45,7 +34,7 @@ private:
     const float LOAD_FACTOR_THRESHOLD = 0.5f;
 
     void rehash();
-    size_t hashIndex(int64_t key, size_t bucketCount) const;
+    size_t hash(int64_t key, size_t size) const;
 
 public:
     ChainingHashTable();
@@ -68,7 +57,7 @@ public:
         using reference = Entry&;
 
         iterator();
-        iterator(BucketContainer* container, size_t bucketIndex, BucketIterator it);
+        iterator(BucketContainer* c, size_t bi, BucketIterator it);
 
         iterator& operator++();
         iterator operator++(int);
@@ -83,7 +72,8 @@ public:
         BucketContainer* container = nullptr;
         size_t bucketIndex = 0;
         BucketIterator entryIt;
-        void advance_to_next_valid();
+        void advance_to_next_nonempty_bucket();
+        bool is_end() const;
         friend class ChainingHashTable;
     };
 
@@ -93,8 +83,10 @@ public:
 };
 
 //---------------------------------------------------------------------------
-
 } // namespace hashtable
 //---------------------------------------------------------------------------
-
 #endif
+
+
+
+
