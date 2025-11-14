@@ -274,6 +274,11 @@ std::vector<std::string> fibonacciProgram(unsigned n)
     }
 
     program.push_back("0");
+
+    // Also emit program text to stdout (tests capture std::cout)
+    for (const auto &line : program) {
+        std::cout << line << '\n';
+    }
     return program;
 }
 
