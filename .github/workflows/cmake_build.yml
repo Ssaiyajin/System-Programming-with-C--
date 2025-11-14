@@ -16,6 +16,7 @@ jobs:
     name: Build - ${{ matrix.project }}
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         project:
           - simple_vm
@@ -70,6 +71,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         project:
           - simple_vm
