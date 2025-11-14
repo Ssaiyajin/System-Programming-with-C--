@@ -1,8 +1,8 @@
-// ...existing code...
 #include "simplevm/simplevm.hpp"
 
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -10,212 +10,278 @@
 
 namespace simplevm {
 
-constexpr int OPC_HALT  = 0;
-constexpr int OPC_MOVI  = 10;
-constexpr int OPC_MOVF  = 11;
-constexpr int OPC_MOV   = 20;
-constexpr int OPC_STORE = 21;
-constexpr int OPC_SWAP  = 22;
-constexpr int OPC_ADD3  = 30;
-constexpr int OPC_FCPY  = 31;
-constexpr int OPC_FSWAP = 32;
-constexpr int OPC_ADDI  = 50;
-constexpr int OPC_SUBI  = 51;
-constexpr int OPC_RSUBI = 52;
-constexpr int OPC_MULI  = 53;
-constexpr int OPC_DIVI  = 54;
-constexpr int OPC_ADDF  = 60;
-constexpr int OPC_SUBF  = 61;
-constexpr int OPC_MULF  = 62;
-constexpr int OPC_DIVF  = 63;
-constexpr int OPC_ITOF  = 40;
-constexpr int OPC_FTOI  = 41;
+// helper indexers
+static auto idx_int = [](char r) -> std::size_t {
+    switch (r) {
+        case 'A': return 0;
+        case 'B': return 1;
+        case 'C': return 2;
+        case 'D': return 3;
+        default:  return 0;
+    }
+};
+static auto idx_float = [](char r) -> std::size_t {
+    switch (r) {
+        case 'X': return 0;
+        case 'Y': return 1;
+        case 'Z': return 2;
+        case 'W': return 3;
+        default:  return 0;
+    }
+};
 
-inline bool isIntReg(char r) noexcept { return r >= 'A' && r <= 'D'; }
-inline bool isFloatReg(char r) noexcept { return r >= 'X' && r <= 'W'; }
-inline std::size_t idxInt(char r) noexcept { return static_cast<std::size_t>(r - 'A'); }
-inline std::size_t idxFloat(char r) noexcept { return static_cast<std::size_t>(r - 'X'); }
-
-static std::vector<std::string> tokenize(const std::string& line) {
-    std::vector<std::string> toks;
-    std::istringstream iss(line);
-    std::string t;
-    while (iss >> t) toks.push_back(std::move(t));
-    return toks;
-}
-
-// Execute textual program and return register A.
+// Run a program given as text instructions. Returns register A.
 int32_t runVM(const std::vector<std::string>& instructions)
 {
     std::array<int32_t,4> I = {0,0,0,0};
     std::array<double,4> F = {0.0,0.0,0.0,0.0};
 
-    for (const auto& line : instructions) {
-        if (line.empty()) continue;
-        auto tok = tokenize(line);
-        if (tok.empty()) continue;
-        // first token must be opcode number
-        int opcode = 0;
-        try { opcode = std::stoi(tok[0]); } catch (...) { continue; }
+    for (const std::string& instruction : instructions) {
+        if (instruction.empty()) continue;
+
+        std::istringstream iss(instruction);
+        int opcode;
+        if (!(iss >> opcode)) continue;
 
         switch (opcode) {
-        case OPC_HALT:
+        case 0: // halt / return A
             return I[0];
 
-        case OPC_MOVI:
-            if (tok.size() >= 3 && tok[1].size()==1 && isIntReg(tok[1][0])) {
-                I[idxInt(tok[1][0])] = static_cast<int32_t>(std::stol(tok[2]));
-            }
+        // integer immediate move: 10 <Reg> <Imm>
+        case 10: {
+            char reg; int32_t imm;
+            if (iss >> reg >> imm) I[idx_int(reg)] = imm;
             break;
+        }
 
-        case OPC_MOVF:
-            if (tok.size() >= 3 && tok[1].size()==1 && isFloatReg(tok[1][0])) {
-                F[idxFloat(tok[1][0])] = std::stod(tok[2]);
-            }
+        // float immediate move: 11 <FReg> <Float>
+        case 11: {
+            char reg; double imm;
+            if (iss >> reg >> imm) F[idx_float(reg)] = imm;
             break;
+        }
 
-        // MOV: "20 <Src>" -> load src into A
-        // or  "20 <Dest> <Src>" -> dest = src (int->int or float->float)
-        case OPC_MOV:
-            if (tok.size() == 2 && tok[1].size()==1) {
-                char src = tok[1][0];
-                if (isIntReg(src)) I[0] = I[idxInt(src)];
-                else if (isFloatReg(src)) I[0] = static_cast<int32_t>(F[idxFloat(src)]);
-            } else if (tok.size() >= 3 && tok[1].size()==1 && tok[2].size()==1) {
-                char dest = tok[1][0], src = tok[2][0];
-                if (isIntReg(dest) && isIntReg(src)) I[idxInt(dest)] = I[idxInt(src)];
-                else if (isFloatReg(dest) && isFloatReg(src)) F[idxFloat(dest)] = F[idxFloat(src)];
-            }
-            break;
-
-        case OPC_STORE:
-            if (tok.size() >= 2 && tok[1].size()==1) {
-                char dest = tok[1][0];
-                if (isIntReg(dest)) I[idxInt(dest)] = I[0];
-                else if (isFloatReg(dest)) F[idxFloat(dest)] = static_cast<double>(I[0]);
-            }
-            break;
-
-        case OPC_SWAP:
-            std::swap(I[0], I[1]);
-            break;
-
-        case OPC_ADD3:
-            if (tok.size() >= 4 && tok[1].size()==1 && tok[2].size()==1 && tok[3].size()==1) {
-                char d = tok[1][0], r1 = tok[2][0], r2 = tok[3][0];
-                if (isIntReg(d) && isIntReg(r1) && isIntReg(r2)) {
-                    int64_t t = static_cast<int64_t>(I[idxInt(r1)]) + static_cast<int64_t>(I[idxInt(r2)]);
-                    I[idxInt(d)] = static_cast<int32_t>(t);
+        // register-to-register move or single-arg load into A:
+        // 20 <Dest> <Src>   (two-arg: Dest = Src)
+        // 20 <Src>          (one-arg: A = Src)
+        case 20: {
+            char a, b;
+            if (!(iss >> a)) break;
+            if (iss >> b) {
+                // two-arg move: a = dest, b = src
+                char dest = a, src = b;
+                if ((dest >= 'A' && dest <= 'D') && (src >= 'A' && src <= 'D')) {
+                    I[idx_int(dest)] = I[idx_int(src)];
+                } else if ((dest >= 'X' && dest <= 'W') && (src >= 'X' && src <= 'W')) {
+                    F[idx_float(dest)] = F[idx_float(src)];
                 }
-            }
-            break;
-
-        case OPC_FCPY:
-            if (tok.size() >= 2 && tok[1].size()==1 && isFloatReg(tok[1][0])) {
-                F[idxFloat(tok[1][0])] = F[0];
-            }
-            break;
-
-        case OPC_FSWAP:
-            std::swap(F[0], F[1]);
-            break;
-
-        case OPC_ADDI:
-            I[0] = static_cast<int32_t>(static_cast<int64_t>(I[0]) + static_cast<int64_t>(I[1]));
-            break;
-        case OPC_SUBI:
-            I[0] = static_cast<int32_t>(static_cast<int64_t>(I[0]) - static_cast<int64_t>(I[1]));
-            break;
-        case OPC_RSUBI:
-            I[0] = static_cast<int32_t>(static_cast<int64_t>(I[1]) - static_cast<int64_t>(I[0]));
-            break;
-        case OPC_MULI:
-            I[0] = static_cast<int32_t>(static_cast<int64_t>(I[0]) * static_cast<int64_t>(I[1]));
-            break;
-        case OPC_DIVI: {
-            int32_t a = I[0], b = I[1];
-            if (b == 0) {
-                std::cout << "division by 0\n";
             } else {
-                I[0] = static_cast<int32_t>(a / b);
-                I[1] = static_cast<int32_t>(a % b);
+                // single-arg: load into A from register a
+                char src = a;
+                if (src >= 'A' && src <= 'D') {
+                    I[0] = I[idx_int(src)];
+                } else if (src >= 'X' && src <= 'W') {
+                    // load float src into A by truncation toward zero
+                    I[0] = static_cast<int32_t>(F[idx_float(src)]);
+                }
             }
             break;
         }
 
-        case OPC_ADDF:
+        // single-arg store A -> <Reg>
+        // 21 <Dest>
+        case 21: {
+            char dest;
+            if (!(iss >> dest)) break;
+            if (dest >= 'A' && dest <= 'D') {
+                I[idx_int(dest)] = I[0];
+            } else if (dest >= 'X' && dest <= 'W') {
+                F[idx_float(dest)] = static_cast<double>(I[0]);
+            }
+            break;
+        }
+
+        // swap A and B
+        // 22
+        case 22: {
+            std::swap(I[0], I[1]);
+            break;
+        }
+
+        // three-arg integer add used by fibonacci sample: 30 <Dest> <R1> <R2>
+        case 30: {
+            char dest, r1, r2;
+            if (iss >> dest >> r1 >> r2) {
+                if ((dest >= 'A' && dest <= 'D') && (r1 >= 'A' && r1 <= 'D') && (r2 >= 'A' && r2 <= 'D')) {
+                    int64_t tmp = (int64_t)I[idx_int(r1)] + (int64_t)I[idx_int(r2)];
+                    I[idx_int(dest)] = static_cast<int32_t>(tmp);
+                }
+            }
+            break;
+        }
+
+        // float-register helpers:
+        // 31 <DestFReg>  : copy X -> DestFReg
+        case 31: {
+            char dest;
+            if (!(iss >> dest)) break;
+            if (dest >= 'X' && dest <= 'W') {
+                F[idx_float(dest)] = F[0];
+            }
+            break;
+        }
+
+        // swap X and Y
+        // 32
+        case 32: {
+            std::swap(F[0], F[1]);
+            break;
+        }
+
+        // integer arithmetic on A and B (store result in A)
+        // 50 addi: A = A + B
+        case 50: {
+            int64_t tmp = (int64_t)I[0] + (int64_t)I[1];
+            I[0] = static_cast<int32_t>(tmp);
+            break;
+        }
+        // 51 subi: A = A - B
+        case 51: {
+            int64_t tmp = (int64_t)I[0] - (int64_t)I[1];
+            I[0] = static_cast<int32_t>(tmp);
+            break;
+        }
+        // 52 rsubi: A = B - A
+        case 52: {
+            int64_t tmp = (int64_t)I[1] - (int64_t)I[0];
+            I[0] = static_cast<int32_t>(tmp);
+            break;
+        }
+        // 53 muli: A = A * B
+        case 53: {
+            int64_t tmp = (int64_t)I[0] * (int64_t)I[1];
+            I[0] = static_cast<int32_t>(tmp);
+            break;
+        }
+        // 54 divi: A = A / B  (detect div by zero)
+        case 54: {
+            {
+                int32_t a = I[0];
+                int32_t b = I[1];
+                if (b == 0) {
+                    // tests capture stdout
+                    std::cout << "division by 0\n";
+                } else {
+                    // compute quotient and remainder from originals
+                    int32_t q = static_cast<int32_t>(a / b);
+                    int32_t r = static_cast<int32_t>(a % b);
+                    I[0] = q;
+                    I[1] = r;
+                }
+            }
+            break;
+        }
+
+        // float arithmetic operating on X and Y, result in X
+        // 60 addf: X = X + Y
+        case 60: {
             F[0] = F[0] + F[1];
             break;
-        case OPC_SUBF:
+        }
+        // 61 subf: X = X - Y
+        case 61: {
             F[0] = F[0] - F[1];
             break;
-        case OPC_MULF:
+        }
+        // 62 mulf: X = X * Y
+        case 62: {
             F[0] = F[0] * F[1];
             break;
-        case OPC_DIVF:
-            if (F[1] == 0.0) std::cout << "division by 0\n";
-            else F[0] = F[0] / F[1];
+        }
+        // 63 divf: X = X / Y (detect div by zero)
+        case 63: {
+            if (F[1] == 0.0) {
+                // tests capture stdout
+                std::cout << "division by 0\n";
+            } else {
+                F[0] = F[0] / F[1];
+            }
             break;
+        }
 
-        case OPC_ITOF:
+        // 40 itof: convert A (int) -> X (float)
+        case 40: {
             F[0] = static_cast<double>(I[0]);
             break;
-        case OPC_FTOI:
+        }
+
+        // 41 ftoi: convert X (float) -> A (int) by truncation toward zero
+        case 41: {
             I[0] = static_cast<int32_t>(F[0]);
             break;
+        }
 
         default:
+            // unknown opcode: ignore
             break;
         }
     }
 
+    // If program falls through without explicit halt, return A
     return I[0];
 }
 
-// Accept program as newline-separated text.
+// Convenience overload: accept program as single string with newlines.
 int32_t runVM(const std::string& programText)
 {
     std::vector<std::string> lines;
     std::istringstream iss(programText);
     std::string line;
     while (std::getline(iss, line)) {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
+        // trim trailing CR
+        if (!line.empty() && (line.back() == '\r')) line.pop_back();
         lines.push_back(line);
     }
     return runVM(lines);
 }
 
-// Read program from stdin (used by tests).
+// Default-run: read program from std::cin (used by tests)
 int32_t runVM()
 {
     std::vector<std::string> lines;
     std::string line;
     while (std::getline(std::cin, line)) {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (!line.empty() && (line.back() == '\r')) line.pop_back();
         lines.push_back(line);
     }
     return runVM(lines);
 }
 
-// Produce a Fibonacci program as textual instructions. After execution
-// register A will contain f(n).
+// Produce a Fibonacci program as a sequence of text instructions.
+// Program uses registers:
+//   A = f(n-2), B = f(n-1), C = f(n)
 std::vector<std::string> fibonacciProgram(unsigned n)
 {
     std::vector<std::string> program;
-    program.reserve(2 + n * 3 + 1);
 
-    program.push_back("10 A 0"); // A = f0
-    program.push_back("10 B 1"); // B = f1
+    // initialize f0 and f1
+    program.push_back("10 A 0"); // A = 0
+    program.push_back("10 B 1"); // B = 1
 
+    // perform the update n times: C = A + B ; A = B ; B = C
     for (unsigned i = 0; i < n; ++i) {
         program.push_back("30 C A B"); // C = A + B
         program.push_back("20 A B");   // A = B
         program.push_back("20 B C");   // B = C
     }
 
-    program.push_back("0"); // halt
+    program.push_back("0");
+
+    // Also emit program text to stdout (tests capture std::cout)
+    for (const auto &line : program) {
+        std::cout << line << '\n';
+    }
     return program;
 }
 
 } // namespace simplevm
-// ...existing code...
