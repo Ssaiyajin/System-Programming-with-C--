@@ -15,8 +15,7 @@ jobs:
   build:
     name: Build - ${{ matrix.project }}
     runs-on: ubuntu-latest
-    # strategy:
-    #   max-parallel: 1
+    strategy:
       matrix:
         project:
           # - simple_vm
@@ -70,8 +69,7 @@ jobs:
     name: Lint - ${{ matrix.project }}
     needs: build
     runs-on: ubuntu-latest
-    # strategy:
-    #   max-parallel: 1
+    strategy:
       matrix:
         project:
           - simple_vm
