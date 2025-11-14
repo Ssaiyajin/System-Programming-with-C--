@@ -4,17 +4,19 @@
 #include "lib/TempDirectory.hpp"
 #include <string>
 #include <vector>
+#include <filesystem>
 //---------------------------------------------------------------------------
 namespace raii {
 //---------------------------------------------------------------------------
+
 class TempDirectory; // Forward declaration
 
 class CommandLine {
-    public:
-    CommandLine(); // Declare the default constructor
+public:
+    CommandLine();
     ~CommandLine();
 
-    // emulate the sequence used by the tests
+    // run reads commands from stdin and executes them (enter/create/leave/remove/list/quit)
     void run(const std::string& directory);
 
     void current();
@@ -24,12 +26,13 @@ class CommandLine {
     void list();
     void remove(int index);
     void quit();
+
 private:
-    std::string directory; // Member variable to hold directory path
+    std::string directory;       // the path passed into run(), e.g. "/tmp/raii_test"
     std::string currentDir;
-    std::string topLevelDir; // Add topLevelDir member
-    std::vector<TempDirectory> tempDirs;
-    std::vector<std::string> tempFiles; // Declare tempFiles vector
+    std::string topLevelDirName; // basename like "raii_test"
+    std::vector<TempDirectory> tempDirs; // first element will be base temp dir
+    std::vector<std::string> tempFiles;  // tracked files (file paths)
 
     // state for subdir creation
     int nextDirIndex = 0;
