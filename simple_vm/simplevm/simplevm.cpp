@@ -266,20 +266,13 @@ std::vector<std::string> fibonacciProgram(unsigned n)
     program.push_back("10 A 0"); // A = 0
     program.push_back("10 B 1"); // B = 1
 
-    if (n == 0) {
-        program.push_back("0");
-        return program;
-    }
-
-    // for i = 1..n-1: C = A + B ; A = B ; B = C
-    for (unsigned i = 1; i <= (n - 1); ++i) {
+    // perform the update n times: C = A + B ; A = B ; B = C
+    for (unsigned i = 0; i < n; ++i) {
         program.push_back("30 C A B"); // C = A + B
         program.push_back("20 A B");   // A = B
         program.push_back("20 B C");   // B = C
     }
 
-    // result f(n) is in B for n>=1 — move it into A then halt
-    program.push_back("20 A B");
     program.push_back("0");
     return program;
 }
