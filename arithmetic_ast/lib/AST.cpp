@@ -28,6 +28,8 @@ ASTNode::Type UnaryPlus::getType() const { return ASTNode::Type::UnaryPlus; }
 double UnaryPlus::evaluate(EvaluationContext& ctx) { return childNode->evaluate(ctx); }
 void UnaryPlus::accept(ASTVisitor& visitor) { visitor.visit(*this); }
 std::unique_ptr<ASTNode>& UnaryPlus::getMutableInput() { return childNode; }
+ASTNode& UnaryPlus::getInput() { return *childNode; }
+const ASTNode& UnaryPlus::getInput() const { return *childNode; }
 void UnaryPlus::optimize(std::unique_ptr<ASTNode>& thisRef) {
     if (childNode) childNode->optimize(childNode);
     // +(+x) => +x  and +param => param (simple flatten)
@@ -44,6 +46,8 @@ ASTNode::Type UnaryMinus::getType() const { return ASTNode::Type::UnaryMinus; }
 double UnaryMinus::evaluate(EvaluationContext& ctx) { return -childNode->evaluate(ctx); }
 void UnaryMinus::accept(ASTVisitor& visitor) { visitor.visit(*this); }
 std::unique_ptr<ASTNode>& UnaryMinus::getMutableInput() { return childNode; }
+ASTNode& UnaryMinus::getInput() { return *childNode; }
+const ASTNode& UnaryMinus::getInput() const { return *childNode; }
 
 void UnaryMinus::optimize(std::unique_ptr<ASTNode>& thisRef) {
     if (childNode) childNode->optimize(childNode);
