@@ -6,7 +6,7 @@ namespace hashtable {
 
 ChainingHashTable::ChainingHashTable()
     : buckets(numBuckets), numEntries(0) {}
-
+    : buckets(), numEntries(0) {
 ChainingHashTable::ChainingHashTable(ChainingHashTable&& other) noexcept
     : buckets(std::move(other.buckets)),
       numEntries(other.numEntries),
@@ -14,7 +14,7 @@ ChainingHashTable::ChainingHashTable(ChainingHashTable&& other) noexcept
     other.numEntries = 0;
     other.numBuckets = 0;
 }
-
+    }
 ChainingHashTable::~ChainingHashTable() = default;
 
 ChainingHashTable& ChainingHashTable::operator=(ChainingHashTable&& other) noexcept {
