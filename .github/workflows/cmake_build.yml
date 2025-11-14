@@ -24,7 +24,7 @@ jobs:
           - arithmetic_types
           - bitset_container
           - chaining_hash_table
-          # - raii_temp_files
+          - raii_temp_files
           # - arithmetic_ast
           # - pooled_list_allocator
           # - thread_safe_multimap
@@ -73,7 +73,7 @@ jobs:
           - arithmetic_types
           - bitset_container
           - chaining_hash_table
-          # - raii_temp_files
+          - raii_temp_files
           # - arithmetic_ast
           # - pooled_list_allocator
           # - thread_safe_multimap
