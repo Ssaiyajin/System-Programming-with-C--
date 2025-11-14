@@ -280,8 +280,14 @@ void Divide::optimize(std::unique_ptr<ASTNode>& thisRef) {
         auto L = releaseLeft();
         auto R = releaseRight();
         if (L && R) {
-            auto one = std::make_unique<Constant>(1.0);
-            auto inv = std::make_unique<Divide>(std::move(one), std::move(R));
+            std::unique_ptr<ASTNode> inv;
+            if (R->getType() == ASTNode::Type::Constant) {
+                double b = static_cast<Constant*>(R.get())->getValue();
+                if (b != 0.0) inv = std::make_unique<Constant>(1.0 / b);
+                else inv = std::make_unique<Constant>(0.0);
+            } else {
+                inv = std::make_unique<Divide>(std::make_unique<Constant>(1.0), std::move(R));
+            }
             thisRef = std::make_unique<Multiply>(std::move(L), std::move(inv));
             return;
         }
