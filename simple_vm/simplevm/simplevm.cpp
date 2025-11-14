@@ -2,21 +2,25 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <limits>
 
 namespace simplevm {
 
-int32_t runVM()
+int32_t runVM(const std::vector<std::string>& instructions, std::ostream* out = nullptr)
 {
-    int A = 0, B = 0, C = 0, D = 0;
+    int32_t A = 0, B = 0, C = 0, D = 0;
 
-    std::vector<std::string> instructions;
+    auto print = [&](const std::string& s) {
+        if (out) *out << s;
+        else std::cerr << s;
+    };
 
     for (const std::string& instruction : instructions) {
         std::istringstream iss(instruction);
         int opcode;
         iss >> opcode;
 
-        if (opcode == 10) {
+        if (opcode == 10) { // movi
             char reg;
             int iimm;
             iss >> reg >> iimm;
@@ -24,39 +28,36 @@ int32_t runVM()
             else if (reg == 'B') B = iimm;
             else if (reg == 'C') C = iimm;
             else if (reg == 'D') D = iimm;
-        } else if (opcode == 20) {
+        } else if (opcode == 20) { // mov
             char dest, src;
             iss >> dest >> src;
-            if (dest == 'A') {
-                if (src == 'A') A = A;
-                else if (src == 'B') A = B;
-                else if (src == 'C') A = C;
-                else if (src == 'D') A = D;
-            } else if (dest == 'B') {
-                if (src == 'A') B = A;
-                else if (src == 'B') B = B;
-                else if (src == 'C') B = C;
-                else if (src == 'D') B = D;
-            } else if (dest == 'C') {
-                if (src == 'A') C = A;
-                else if (src == 'B') C = B;
-                else if (src == 'C') C = C;
-                else if (src == 'D') C = D;
-            } else if (dest == 'D') {
-                if (src == 'A') D = A;
-                else if (src == 'B') D = B;
-                else if (src == 'C') D = C;
-                else if (src == 'D') D = D;
+            int32_t* d = nullptr;
+            int32_t* s = nullptr;
+            if (dest == 'A') d = &A;
+            else if (dest == 'B') d = &B;
+            else if (dest == 'C') d = &C;
+            else if (dest == 'D') d = &D;
+            if (src == 'A') s = &A;
+            else if (src == 'B') s = &B;
+            else if (src == 'C') s = &C;
+            else if (src == 'D') s = &D;
+            if (d && s) *d = *s;
+        } else if (opcode == 50) { // addi
+            A = static_cast<int32_t>(static_cast<int64_t>(A) + B);
+        } else if (opcode == 51) { // subi
+            A = static_cast<int32_t>(static_cast<int64_t>(A) - B);
+        } else if (opcode == 52) { // rsubi
+            A = static_cast<int32_t>(static_cast<int64_t>(B) - A);
+        } else if (opcode == 53) { // muli
+            A = static_cast<int32_t>(static_cast<int64_t>(A) * B);
+        } else if (opcode == 54) { // divi
+            if (B == 0) {
+                print("division by 0\n");
+                return A;
             }
-        } else if (opcode == 50) {
-            char reg;
-            iss >> reg;
-            if (reg == 'A') A += 1;
-            else if (reg == 'B') B += 1;
-            else if (reg == 'C') C += 1;
-            else if (reg == 'D') D += 1;
-        } else if (opcode == 63) {
-            std::cerr << "division by 0" << std::endl;
+            A = A / B;
+        } else if (opcode == 63) { // division by 0 signal
+            print("division by 0\n");
             return A;
         }
     }
@@ -64,22 +65,18 @@ int32_t runVM()
     return A;
 }
 
-void fibonacciProgram(unsigned n)
+void fibonacciProgram(unsigned n, std::vector<std::string>& program)
 {
-    std::vector<std::string> program;
-    program.push_back("10A0"); // Set f0 to 0
-    program.push_back("10B1"); // Set f1 to 1
-    program.push_back("10C0"); // Set fn to 0
+    program.clear();
+    program.push_back("10 A 0"); // f0
+    program.push_back("10 B 1"); // f1
+    program.push_back("10 C 0"); // fn
 
     for (unsigned i = 2; i <= n; i++) {
-        program.push_back("20D A"); // D = A (fn-2)
-        program.push_back("20A B"); // A = B (fn-1)
-        program.push_back("20B C"); // B = C (fn)
-        program.push_back("50C");   // C = A + 1 (fn+1)
-    }
-
-    for (const std::string& instruction : program) {
-        std::cout << instruction << std::endl;
+        program.push_back("20 D A"); // D = A (fn-2)
+        program.push_back("20 A B"); // A = B (fn-1)
+        program.push_back("50");     // A = A + B
+        program.push_back("20 C A"); // C = A (fn)
     }
 }
 
