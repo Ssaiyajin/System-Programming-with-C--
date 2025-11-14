@@ -6,9 +6,10 @@
 
 namespace hashtable {
 //---------------------------------------------------------------------------
-
 ChainingHashTable::ChainingHashTable()
-    : buckets(numBuckets), numEntries(0) {}
+    : numBuckets(16), buckets(16), numEntries(0) {}
+
+
 
 ChainingHashTable::~ChainingHashTable() {
     // default containers destructors are fine
