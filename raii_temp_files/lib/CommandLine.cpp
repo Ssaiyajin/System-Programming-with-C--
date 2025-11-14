@@ -1,7 +1,10 @@
 #include "lib/CommandLine.hpp"
-#include <iostream> // for demo purposes, remove in actual implementation
+#include <iostream>
 #include <sstream>
-#include <fstream> // Include for std::ofstream
+#include <fstream>
+#include <filesystem>
+#include <thread>
+#include <chrono>
 //---------------------------------------------------------------------------
 namespace raii {
 //---------------------------------------------------------------------------
@@ -61,14 +64,20 @@ void CommandLine::create() {
         std::cerr << "Failed to create directory: " << dir0 << " - " << ec.message() << std::endl;
     }
 
-    // create files inside dir0
+    // allow watcher time to observe the directory creation before creating files
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+    // create files inside dir0 in strict order, ensure file is closed before continuing
     std::string file0 = dir0 + "/file0";
     {
         std::ofstream outFile0(file0);
-    }
+    } // destructor closes file
     tempFiles.push_back(file0);
     if (!tempDirs.empty()) tempDirs.back().addFile(file0);
     std::cout << "Created file: \"" << file0 << "\"" << std::endl;
+
+    // tiny pause so inotify ordering is more deterministic
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
     std::string file1 = dir0 + "/file1";
     {
@@ -77,6 +86,9 @@ void CommandLine::create() {
     tempFiles.push_back(file1);
     if (!tempDirs.empty()) tempDirs.back().addFile(file1);
     std::cout << "Created file: \"" << file1 << "\" inside \"" << dir0 << "\"" << std::endl;
+
+    // another small pause before top-level file
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
     // create a file at top-level
     std::string file2 = topLevelDir + "/file2";
