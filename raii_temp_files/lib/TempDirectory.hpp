@@ -18,19 +18,20 @@ namespace raii {
 
         std::string getPath() const;
         void addFile(const std::string& filePath);
-        void removeFiles(); // Declaration3
+        void addDir(const std::string& dirPath);
+        void removeFiles(); // remove created files and attempt to remove created subdirs
         bool isEmpty() const {
             return std::filesystem::is_empty(directoryPath);
         }
 
-    // removeDirectory removes the temp directory if it is empty and returns true on success
+    // remove base directory if it's empty
     bool removeDirectory();
 
     private:
         std::string directoryPath;
         raii::CommandLine& cmdPtr;
-        std::vector<std::string> createdFiles; // Move the declaration inside the class
-        std::vector<std::string> createdDirs;  // track created directories so they can be removed
+        std::vector<std::string> createdFiles; // track created files
+        std::vector<std::string> createdDirs;  // track created subdirectories (dir0, dir1, ...)
     };
 
 //---------------------------------------------------------------------------
