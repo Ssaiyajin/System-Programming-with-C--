@@ -56,12 +56,17 @@ jobs:
 
       - name: Run tests (if test executable exists)
         working-directory: "build_${{ matrix.project }}"
-        continue-on-error: true
-        run: |
-          ls -R .
-
-          ./test/tester  # runs your test executable
-
+         run: |
+              echo "Searching for test executable..."
+              find . -maxdepth 3 -type f -name "tester" -exec echo "Found: {}" \;
+              TEST_EXEC=$(find . -maxdepth 3 -type f -name "tester" | head -n 1)
+              if [ -z "$TEST_EXEC" ]; then
+                echo "❌ No test executable found"
+                exit 1
+              fi
+              echo "Running: $TEST_EXEC"
+              chmod +x "$TEST_EXEC"
+              "$TEST_EXEC"    
   lint:
     name: Lint - ${{ matrix.project }}
     needs: build
