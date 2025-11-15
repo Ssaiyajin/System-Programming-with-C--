@@ -114,7 +114,7 @@ TEST(TestChainingHashTable, Move) {
     EXPECT_TRUE(ht1.contains(123));
     EXPECT_TRUE(ht1.contains(234));
 
-    ChainingHashTable ht2(move(ht1));
+    ChainingHashTable ht2(std::move(ht1));
     EXPECT_EQ(ht2.size(), 2);
     EXPECT_TRUE(ht2.contains(123));
     EXPECT_TRUE(ht2.contains(234));

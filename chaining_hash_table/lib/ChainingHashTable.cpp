@@ -75,8 +75,8 @@ GenericValue& ChainingHashTable::operator[](int64_t key) {
     size_t index = hash(key, numBuckets);
     auto& bucket = buckets[index];
 
-    for (auto it = bucket.begin(); it != bucket.end(); ++it) {
-        if (it->key == key) return it->value;
+    for (auto &entry : bucket) {
+        if (entry.key == key) return entry.value;
     }
 
     bucket.emplace_back(key, GenericValue());
@@ -95,10 +95,10 @@ GenericValue& ChainingHashTable::insert(int64_t key, GenericValue&& value) {
     size_t index = hash(key, numBuckets);
     auto& bucket = buckets[index];
 
-    for (auto it = bucket.begin(); it != bucket.end(); ++it) {
-        if (it->key == key) {
-            it->value = std::move(value);
-            return it->value;
+    for (auto &entry : bucket) {
+        if (entry.key == key) {
+            entry.value = std::move(value);
+            return entry.value;
         }
     }
 
