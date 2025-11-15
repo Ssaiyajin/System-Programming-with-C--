@@ -70,8 +70,10 @@ BitSet::BitReference& BitSet::BitReference::operator=(bool value) {
 }
 
 BitSet::BitReference& BitSet::BitReference::operator=(const BitReference& other) {
-    // Copy rhs value into a local to avoid any aliasing / self-assignment issues,
-    // then assign to lhs. This satisfies clang-tidy's self-assignment check.
+    // If both proxies refer to the exact same bit, do nothing (handle self-assignment)
+    if (bitset_ptr == other.bitset_ptr && pos == other.pos) {
+        return *this;
+    }
     bool val = other.bitset_ptr->bits[other.pos];
     bitset_ptr->bits[pos] = val;
     return *this;
