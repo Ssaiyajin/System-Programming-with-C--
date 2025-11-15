@@ -18,7 +18,7 @@ bool operator==(const Int& i1, int i2) { return i1.i == i2; }
 bool operator!=(const Int& i1, const Int& i2) { return i1.i != i2.i; }
 bool operator!=(int i1, const Int& i2) { return i1 != i2.i; }
 bool operator!=(const Int& i1, int i2) { return i1.i != i2; }
-}
+} // namespace allocator_list::test_find
 using namespace allocator_list::test_find;
 //---------------------------------------------------------------------------
 TEST(TestFind, Vector) {

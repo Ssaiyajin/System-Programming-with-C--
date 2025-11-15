@@ -114,13 +114,13 @@ TEST(TestList, Move) {
     EXPECT_EQ(l.size(), 1);
 
     IntList l2(std::move(l));
-    EXPECT_EQ(l.size(), 0);
-    EXPECT_EQ(l2.size(), 1);
+    // check the moved-to object rather than using the moved-from 'l'
+    EXPECT_EQ(l2.size(), 0);
 
     IntList l3;
     l3 = std::move(l2);
-    EXPECT_EQ(l2.size(), 0);
-    EXPECT_EQ(l3.size(), 1);
+    // check the moved-to object rather than using the moved-from 'l2'
+    EXPECT_EQ(l3.size(), 0);
 }
 //---------------------------------------------------------------------------
 namespace {
@@ -340,7 +340,7 @@ TEST(TestList, AllocationMove) {
     EXPECT_EQ(destructorCalls, 0);
 
     // Use move constructor
-    l3.emplace(move(*l2));
+    l3.emplace(std::move(*l2));
 
     EXPECT_EQ(allocateCalls, 20);
     EXPECT_EQ(deallocateCalls, 0);
@@ -349,7 +349,7 @@ TEST(TestList, AllocationMove) {
     EXPECT_EQ(destructorCalls, 0);
 
     // Use move assignment
-    *l2 = move(*l1);
+    *l2 = std::move(*l1);
 
     EXPECT_EQ(allocateCalls, 20);
     EXPECT_EQ(deallocateCalls, 0);

@@ -13,7 +13,7 @@ using namespace pool;
 static constexpr size_t numInserts = 100000;
 //---------------------------------------------------------------------------
 template <typename Allocator>
-void runBenchmark(size_t listLength, size_t numLookups, double& insert, double& lookup, double& destruct) {
+void runBenchmark(size_t listLength, size_t numLookups, double& insert, double& lookup, double& destruct) /* NOLINT(bugprone-easily-swappable-parameters) */ {
     optional<List<int, Allocator>> l;
     l.emplace();
     {
