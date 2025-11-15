@@ -58,8 +58,8 @@ jobs:
         working-directory: "build_${{ matrix.project }}"
         continue-on-error: true
         run: |
-          ls 
-          cd test
+          ls -R .
+
           ./test/tester  # runs your test executable
 
   lint:
