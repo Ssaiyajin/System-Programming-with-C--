@@ -70,7 +70,10 @@ BitSet::BitReference& BitSet::BitReference::operator=(bool value) {
 }
 
 BitSet::BitReference& BitSet::BitReference::operator=(const BitReference& other) {
-    bitset_ptr->bits[pos] = other.bitset_ptr->bits[other.pos];
+    // Copy rhs value into a local to avoid any aliasing / self-assignment issues,
+    // then assign to lhs. This satisfies clang-tidy's self-assignment check.
+    bool val = other.bitset_ptr->bits[other.pos];
+    bitset_ptr->bits[pos] = val;
     return *this;
 }
 // BitIterator class implementation
