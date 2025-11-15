@@ -70,7 +70,11 @@ BitSet::BitReference& BitSet::BitReference::operator=(bool value) {
 }
 
 BitSet::BitReference& BitSet::BitReference::operator=(const BitReference& other) {
-    // If both proxies refer to the exact same bit, do nothing (handle self-assignment)
+    // Guard against self-assignment of the proxy object itself
+    if (this == &other) {
+        return *this;
+    }
+    // If both proxies refer to the exact same bit, do nothing
     if (bitset_ptr == other.bitset_ptr && pos == other.pos) {
         return *this;
     }
