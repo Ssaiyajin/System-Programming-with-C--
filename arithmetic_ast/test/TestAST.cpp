@@ -68,9 +68,9 @@ TEST(TestAST, EvaluateNested) {
     context.pushParameter(4.0);
     unique_ptr<ASTNode> node1 = make_unique<Add>(make_unique<Parameter>(0), make_unique<Parameter>(1));
     unique_ptr<ASTNode> node2 = make_unique<Subtract>(make_unique<Parameter>(1), make_unique<Parameter>(0));
-    unique_ptr<ASTNode> node = make_unique<Multiply>(move(node1), move(node2));
-    node = make_unique<Divide>(move(node), make_unique<Constant>(2.0));
-    node = make_unique<Power>(move(node), make_unique<Constant>(2.0));
+    unique_ptr<ASTNode> node = make_unique<Multiply>(std::move(node1), std::move(node2));
+    node = make_unique<Divide>(std::move(node), make_unique<Constant>(2.0));
+    node = make_unique<Power>(std::move(node), make_unique<Constant>(2.0));
     EXPECT_EQ(node->evaluate(context), 36.0);
 }
 //---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ TEST(TestAST, OptimizeUnaryPlus) {
     SCOPED_TRACE("+a -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<UnaryPlus>(move(a));
+    unique_ptr<ASTNode> node = make_unique<UnaryPlus>(std::move(a));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -95,8 +95,8 @@ TEST(TestAST, OptimizeUnaryMinus1) {
     SCOPED_TRACE("-(-a) -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(move(a));
-    node = make_unique<UnaryMinus>(move(node));
+    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(std::move(a));
+    node = make_unique<UnaryMinus>(std::move(node));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -107,8 +107,8 @@ TEST(TestAST, OptimizeUnaryMinus2) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> node = make_unique<Subtract>(move(a), move(b));
-    node = make_unique<UnaryMinus>(move(node));
+    unique_ptr<ASTNode> node = make_unique<Subtract>(std::move(a), std::move(b));
+    node = make_unique<UnaryMinus>(std::move(node));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Subtract);
     auto& s = static_cast<Subtract&>(*node);
@@ -124,9 +124,9 @@ TEST(TestAST, OptimizeUnaryMinus3) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(move(a));
-    node = make_unique<Subtract>(move(node), move(b));
-    node = make_unique<UnaryMinus>(move(node));
+    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(std::move(a));
+    node = make_unique<Subtract>(std::move(node), std::move(b));
+    node = make_unique<UnaryMinus>(std::move(node));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Add);
     auto& s = static_cast<Add&>(*node);
@@ -148,7 +148,7 @@ TEST(TestAST, OptimizeAdd1) {
     SCOPED_TRACE("a + 0 -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Add>(move(a), make_unique<Constant>(0));
+    unique_ptr<ASTNode> node = make_unique<Add>(std::move(a), make_unique<Constant>(0));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -157,7 +157,7 @@ TEST(TestAST, OptimizeAdd2) {
     SCOPED_TRACE("0 + a -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Add>(make_unique<Constant>(0), move(a));
+    unique_ptr<ASTNode> node = make_unique<Add>(make_unique<Constant>(0), std::move(a));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -168,8 +168,8 @@ TEST(TestAST, OptimizeAdd3) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(move(a));
-    node = make_unique<Add>(move(node), move(b));
+    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(std::move(a));
+    node = make_unique<Add>(std::move(node), std::move(b));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Subtract);
     auto& s = static_cast<Subtract&>(*node);
@@ -185,8 +185,8 @@ TEST(TestAST, OptimizeAdd4) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(move(b));
-    node = make_unique<Add>(move(a), move(node));
+    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(std::move(b));
+    node = make_unique<Add>(std::move(a), std::move(node));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Subtract);
     auto& s = static_cast<Subtract&>(*node);
@@ -208,7 +208,7 @@ TEST(TestAST, OptimizeSubtract1) {
     SCOPED_TRACE("a - 0 -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Subtract>(move(a), make_unique<Constant>(0));
+    unique_ptr<ASTNode> node = make_unique<Subtract>(std::move(a), make_unique<Constant>(0));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -217,7 +217,7 @@ TEST(TestAST, OptimizeSubtract2) {
     SCOPED_TRACE("0 - a -> -a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Subtract>(make_unique<Constant>(0), move(a));
+    unique_ptr<ASTNode> node = make_unique<Subtract>(make_unique<Constant>(0), std::move(a));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::UnaryMinus);
     auto& u = static_cast<UnaryMinus&>(*node);
@@ -231,8 +231,8 @@ TEST(TestAST, OptimizeSubtract3) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(move(b));
-    node = make_unique<Subtract>(move(a), move(node));
+    unique_ptr<ASTNode> node = make_unique<UnaryMinus>(std::move(b));
+    node = make_unique<Subtract>(std::move(a), std::move(node));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Add);
     auto& add = static_cast<Add&>(*node);
@@ -253,7 +253,7 @@ TEST(TestAST, OptimizeMultiplyConstant) {
 TEST(TestAST, OptimizeMultiply1) {
     SCOPED_TRACE("a * 0 -> 0");
     auto a = make_unique<Parameter>(0);
-    unique_ptr<ASTNode> node = make_unique<Multiply>(move(a), make_unique<Constant>(0));
+    unique_ptr<ASTNode> node = make_unique<Multiply>(std::move(a), make_unique<Constant>(0));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Constant);
     auto& c = static_cast<Constant&>(*node);
@@ -264,7 +264,7 @@ TEST(TestAST, OptimizeMultiply2) {
     SCOPED_TRACE("a * 1 -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Multiply>(move(a), make_unique<Constant>(1));
+    unique_ptr<ASTNode> node = make_unique<Multiply>(std::move(a), make_unique<Constant>(1));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -272,7 +272,7 @@ TEST(TestAST, OptimizeMultiply2) {
 TEST(TestAST, OptimizeMultiply3) {
     SCOPED_TRACE("0 * a -> 0");
     auto a = make_unique<Parameter>(0);
-    unique_ptr<ASTNode> node = make_unique<Multiply>(make_unique<Constant>(0), move(a));
+    unique_ptr<ASTNode> node = make_unique<Multiply>(make_unique<Constant>(0), std::move(a));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Constant);
     auto& c = static_cast<Constant&>(*node);
@@ -283,7 +283,7 @@ TEST(TestAST, OptimizeMultiply4) {
     SCOPED_TRACE("1 * a -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Multiply>(make_unique<Constant>(1), move(a));
+    unique_ptr<ASTNode> node = make_unique<Multiply>(make_unique<Constant>(1), std::move(a));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -294,9 +294,9 @@ TEST(TestAST, OptimizeMultiply5) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> aMinus = make_unique<UnaryMinus>(move(a));
-    unique_ptr<ASTNode> bMinus = make_unique<UnaryMinus>(move(b));
-    unique_ptr<ASTNode> node = make_unique<Multiply>(move(aMinus), move(bMinus));
+    unique_ptr<ASTNode> aMinus = make_unique<UnaryMinus>(std::move(a));
+    unique_ptr<ASTNode> bMinus = make_unique<UnaryMinus>(std::move(b));
+    unique_ptr<ASTNode> node = make_unique<Multiply>(std::move(aMinus), std::move(bMinus));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Multiply);
     auto& m = static_cast<Multiply&>(*node);
@@ -318,7 +318,7 @@ TEST(TestAST, OptimizeDivide1) {
     SCOPED_TRACE("a / 1 -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Divide>(move(a), make_unique<Constant>(1));
+    unique_ptr<ASTNode> node = make_unique<Divide>(std::move(a), make_unique<Constant>(1));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -327,7 +327,7 @@ TEST(TestAST, OptimizeDivide2) {
     SCOPED_TRACE("a / c -> a * (1 / c)");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Divide>(move(a), make_unique<Constant>(2));
+    unique_ptr<ASTNode> node = make_unique<Divide>(std::move(a), make_unique<Constant>(2));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Multiply);
     auto& m = static_cast<Multiply&>(*node);
@@ -342,7 +342,7 @@ TEST(TestAST, OptimizeDivide2) {
 TEST(TestAST, OptimizeDivide3) {
     SCOPED_TRACE("0 / a -> 0");
     auto a = make_unique<Parameter>(0);
-    unique_ptr<ASTNode> node = make_unique<Divide>(make_unique<Constant>(0), move(a));
+    unique_ptr<ASTNode> node = make_unique<Divide>(make_unique<Constant>(0), std::move(a));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Constant);
     auto& c = static_cast<Constant&>(*node);
@@ -355,9 +355,9 @@ TEST(TestAST, OptimizeDivide4) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> aMinus = make_unique<UnaryMinus>(move(a));
-    unique_ptr<ASTNode> bMinus = make_unique<UnaryMinus>(move(b));
-    unique_ptr<ASTNode> node = make_unique<Divide>(move(aMinus), move(bMinus));
+    unique_ptr<ASTNode> aMinus = make_unique<UnaryMinus>(std::move(a));
+    unique_ptr<ASTNode> bMinus = make_unique<UnaryMinus>(std::move(b));
+    unique_ptr<ASTNode> node = make_unique<Divide>(std::move(aMinus), std::move(bMinus));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Divide);
     auto& d = static_cast<Divide&>(*node);
@@ -378,7 +378,7 @@ TEST(TestAST, OptimizePowerConstant) {
 TEST(TestAST, OptimizePower1) {
     SCOPED_TRACE("a ^ 0 -> 1");
     auto a = make_unique<Parameter>(0);
-    unique_ptr<ASTNode> node = make_unique<Power>(move(a), make_unique<Constant>(0));
+    unique_ptr<ASTNode> node = make_unique<Power>(std::move(a), make_unique<Constant>(0));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Constant);
     auto& c = static_cast<Constant&>(*node);
@@ -389,7 +389,7 @@ TEST(TestAST, OptimizePower2) {
     SCOPED_TRACE("a ^ 1 -> a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Power>(move(a), make_unique<Constant>(1));
+    unique_ptr<ASTNode> node = make_unique<Power>(std::move(a), make_unique<Constant>(1));
     node->optimize(node);
     EXPECT_EQ(node.get(), aPtr);
 }
@@ -398,7 +398,7 @@ TEST(TestAST, OptimizePower3) {
     SCOPED_TRACE("a ^ -1 -> 1 / a");
     auto a = make_unique<Parameter>(0);
     auto* aPtr = a.get();
-    unique_ptr<ASTNode> node = make_unique<Power>(move(a), make_unique<Constant>(-1));
+    unique_ptr<ASTNode> node = make_unique<Power>(std::move(a), make_unique<Constant>(-1));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Divide);
     auto& d = static_cast<Divide&>(*node);
@@ -413,7 +413,7 @@ TEST(TestAST, OptimizePower3) {
 TEST(TestAST, OptimizePower4) {
     SCOPED_TRACE("0 ^ a -> 0");
     auto a = make_unique<Parameter>(0);
-    unique_ptr<ASTNode> node = make_unique<Power>(make_unique<Constant>(0), move(a));
+    unique_ptr<ASTNode> node = make_unique<Power>(make_unique<Constant>(0), std::move(a));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Constant);
     auto& c = static_cast<Constant&>(*node);
@@ -423,7 +423,7 @@ TEST(TestAST, OptimizePower4) {
 TEST(TestAST, OptimizePower5) {
     SCOPED_TRACE("1 ^ a -> 1");
     auto a = make_unique<Parameter>(0);
-    unique_ptr<ASTNode> node = make_unique<Power>(make_unique<Constant>(1), move(a));
+    unique_ptr<ASTNode> node = make_unique<Power>(make_unique<Constant>(1), std::move(a));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Constant);
     auto& c = static_cast<Constant&>(*node);
@@ -433,8 +433,8 @@ TEST(TestAST, OptimizePower5) {
 TEST(TestAST, OptimizeNested1) {
     SCOPED_TRACE("(2 + 3) ^ 2 - 3 * 3 -> 16");
     unique_ptr<ASTNode> node = make_unique<Add>(make_unique<Constant>(2), make_unique<Constant>(3));
-    node = make_unique<Power>(move(node), make_unique<Constant>(2));
-    node = make_unique<Subtract>(move(node), make_unique<Multiply>(make_unique<Constant>(3), make_unique<Constant>(3)));
+    node = make_unique<Power>(std::move(node), make_unique<Constant>(2));
+    node = make_unique<Subtract>(std::move(node), make_unique<Multiply>(make_unique<Constant>(3), make_unique<Constant>(3)));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Constant);
     auto& c = static_cast<Constant&>(*node);
@@ -447,9 +447,9 @@ TEST(TestAST, OptimizeNested2) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> node1 = make_unique<UnaryMinus>(make_unique<UnaryMinus>(move(a)));
-    unique_ptr<ASTNode> node2 = make_unique<Divide>(move(b), make_unique<Constant>(1));
-    unique_ptr<ASTNode> node = make_unique<Add>(move(node1), move(node2));
+    unique_ptr<ASTNode> node1 = make_unique<UnaryMinus>(make_unique<UnaryMinus>(std::move(a)));
+    unique_ptr<ASTNode> node2 = make_unique<Divide>(std::move(b), make_unique<Constant>(1));
+    unique_ptr<ASTNode> node = make_unique<Add>(std::move(node1), std::move(node2));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Add);
     auto& add = static_cast<Add&>(*node);
@@ -465,9 +465,9 @@ TEST(TestAST, OptimizeNested3) {
     auto* aPtr = a.get();
     auto b = make_unique<Parameter>(1);
     auto* bPtr = b.get();
-    unique_ptr<ASTNode> node1 = make_unique<Power>(move(a), make_unique<Constant>(1));
-    unique_ptr<ASTNode> node2 = make_unique<Multiply>(make_unique<Constant>(1), make_unique<UnaryMinus>(move(b)));
-    unique_ptr<ASTNode> node = make_unique<Add>(move(node1), move(node2));
+    unique_ptr<ASTNode> node1 = make_unique<Power>(std::move(a), make_unique<Constant>(1));
+    unique_ptr<ASTNode> node2 = make_unique<Multiply>(make_unique<Constant>(1), make_unique<UnaryMinus>(std::move(b)));
+    unique_ptr<ASTNode> node = make_unique<Add>(std::move(node1), std::move(node2));
     node->optimize(node);
     ASSERT_EQ(node->getType(), ASTNode::Type::Subtract);
     auto& s = static_cast<Subtract&>(*node);
