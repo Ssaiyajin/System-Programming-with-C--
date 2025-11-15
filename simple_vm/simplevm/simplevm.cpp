@@ -30,6 +30,11 @@ static auto idx_float = [](char r) -> std::size_t {
     }
 };
 
+// helper predicates to avoid incorrect char-range tests
+static auto isIntReg = [](char r) -> bool { return (r >= 'A' && r <= 'D'); };
+// valid float regs are W, X, Y, Z (ASCII order W..Z)
+static auto isFloatReg = [](char r) -> bool { return (r >= 'W' && r <= 'Z'); };
+
 // Run a program given as text instructions. Returns register A.
 int32_t runVM(const std::vector<std::string>& instructions)
 {
@@ -70,17 +75,17 @@ int32_t runVM(const std::vector<std::string>& instructions)
             if (iss >> b) {
                 // two-arg move: a = dest, b = src
                 char dest = a, src = b;
-                if ((dest >= 'A' && dest <= 'D') && (src >= 'A' && src <= 'D')) {
+                if (isIntReg(dest) && isIntReg(src)) {
                     I[idx_int(dest)] = I[idx_int(src)];
-                } else if ((dest >= 'X' && dest <= 'W') && (src >= 'X' && src <= 'W')) {
+                } else if (isFloatReg(dest) && isFloatReg(src)) {
                     F[idx_float(dest)] = F[idx_float(src)];
                 }
             } else {
                 // single-arg: load into A from register a
                 char src = a;
-                if (src >= 'A' && src <= 'D') {
+                if (isIntReg(src)) {
                     I[0] = I[idx_int(src)];
-                } else if (src >= 'X' && src <= 'W') {
+                } else if (isFloatReg(src)) {
                     // load float src into A by truncation toward zero
                     I[0] = static_cast<int32_t>(F[idx_float(src)]);
                 }
@@ -93,9 +98,9 @@ int32_t runVM(const std::vector<std::string>& instructions)
         case 21: {
             char dest;
             if (!(iss >> dest)) break;
-            if (dest >= 'A' && dest <= 'D') {
+            if (isIntReg(dest)) {
                 I[idx_int(dest)] = I[0];
-            } else if (dest >= 'X' && dest <= 'W') {
+            } else if (isFloatReg(dest)) {
                 F[idx_float(dest)] = static_cast<double>(I[0]);
             }
             break;
@@ -112,8 +117,8 @@ int32_t runVM(const std::vector<std::string>& instructions)
         case 30: {
             char dest, r1, r2;
             if (iss >> dest >> r1 >> r2) {
-                if ((dest >= 'A' && dest <= 'D') && (r1 >= 'A' && r1 <= 'D') && (r2 >= 'A' && r2 <= 'D')) {
-                    int64_t tmp = (int64_t)I[idx_int(r1)] + (int64_t)I[idx_int(r2)];
+                if (isIntReg(dest) && isIntReg(r1) && isIntReg(r2)) {
+                    int64_t tmp = static_cast<int64_t>(I[idx_int(r1)]) + static_cast<int64_t>(I[idx_int(r2)]);
                     I[idx_int(dest)] = static_cast<int32_t>(tmp);
                 }
             }
@@ -141,25 +146,25 @@ int32_t runVM(const std::vector<std::string>& instructions)
         // integer arithmetic on A and B (store result in A)
         // 50 addi: A = A + B
         case 50: {
-            int64_t tmp = (int64_t)I[0] + (int64_t)I[1];
+            int64_t tmp = static_cast<int64_t>(I[0]) + static_cast<int64_t>(I[1]);
             I[0] = static_cast<int32_t>(tmp);
             break;
         }
         // 51 subi: A = A - B
         case 51: {
-            int64_t tmp = (int64_t)I[0] - (int64_t)I[1];
+            int64_t tmp = static_cast<int64_t>(I[0]) - static_cast<int64_t>(I[1]);
             I[0] = static_cast<int32_t>(tmp);
             break;
         }
         // 52 rsubi: A = B - A
         case 52: {
-            int64_t tmp = (int64_t)I[1] - (int64_t)I[0];
+            int64_t tmp = static_cast<int64_t>(I[1]) - static_cast<int64_t>(I[0]);
             I[0] = static_cast<int32_t>(tmp);
             break;
         }
         // 53 muli: A = A * B
         case 53: {
-            int64_t tmp = (int64_t)I[0] * (int64_t)I[1];
+            int64_t tmp = static_cast<int64_t>(I[0]) * static_cast<int64_t>(I[1]);
             I[0] = static_cast<int32_t>(tmp);
             break;
         }
