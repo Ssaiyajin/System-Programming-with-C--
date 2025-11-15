@@ -27,12 +27,13 @@ void Rational::simplify() {
 Rational::Rational() : numerator(0), denominator(1) {}
 Rational::Rational(int num) : numerator(num), denominator(1) {}
 Rational::Rational(long long wholeNumber) : numerator(wholeNumber), denominator(1) {}
-Rational::Rational(int num, int denom) : numerator(num), denominator(denom) {
+Rational::Rational(int num, int denom) /* NOLINT(bugprone-easily-swappable-parameters) */ : numerator(num), denominator(denom) {
     simplify();
 }
 
 
-Rational::Rational(long long num, long long denom) : numerator(num), denominator(denom) {
+
+Rational::Rational(long long num, long long denom) /* NOLINT(bugprone-easily-swappable-parameters) */ : numerator(num), denominator(denom) {
     simplify();
 }
 

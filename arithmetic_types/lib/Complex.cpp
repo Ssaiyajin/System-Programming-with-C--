@@ -6,7 +6,7 @@ namespace arithmetic {
 // Implementations of the constructors
     Complex::Complex() : realPart(0.0), imagPart(0.0) {}
     Complex::Complex(double r) : realPart(r), imagPart(0.0) {}
-    Complex::Complex(double r, double i) : realPart(r), imagPart(i) {}
+    Complex::Complex(double r, double i) /* NOLINT(bugprone-easily-swappable-parameters) */ : realPart(r), imagPart(i) {}
 
     // Implementations of member functions and operators
     double Complex::real() const { return realPart; }

@@ -1,6 +1,7 @@
 #include "lib/SortPointers.hpp"
 #include <numeric>
 #include <random>
+#include <algorithm>   // <--- added
 #include <gtest/gtest.h>
 //---------------------------------------------------------------------------
 using namespace std;
@@ -13,7 +14,7 @@ pair<vector<unsigned>, vector<const unsigned*>> generate(unsigned n)
 {
     vector<unsigned> data(n);
     iota(data.begin(), data.end(), 0);
-    shuffle(data.begin(), data.end(), mt19937(42));
+    std::shuffle(data.begin(), data.end(), mt19937(42)); // qualify shuffle
 
     vector<const unsigned*> ptrs;
     ptrs.reserve(data.size());
@@ -21,7 +22,7 @@ pair<vector<unsigned>, vector<const unsigned*>> generate(unsigned n)
     for (const auto& e : data)
         ptrs.push_back(&e);
 
-    return make_pair(move(data), move(ptrs));
+    return std::make_pair(std::move(data), std::move(ptrs)); // qualify move/make_pair
 }
 //---------------------------------------------------------------------------
 } // namespace
