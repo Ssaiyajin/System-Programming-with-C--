@@ -71,23 +71,24 @@ int32_t runVM(const std::vector<std::string>& instructions)
         // 20 <Src>          (one-arg: A = Src)
         case 20: {
             char a, b;
-            if (!(iss >> a)) break;
-            if (iss >> b) {
-                // two-arg move: a = dest, b = src
-                char dest = a, src = b;
-                if (isIntReg(dest) && isIntReg(src)) {
-                    I[idx_int(dest)] = I[idx_int(src)];
-                } else if (isFloatReg(dest) && isFloatReg(src)) {
-                    F[idx_float(dest)] = F[idx_float(src)];
-                }
-            } else {
-                // single-arg: load into A from register a
-                char src = a;
-                if (isIntReg(src)) {
-                    I[0] = I[idx_int(src)];
-                } else if (isFloatReg(src)) {
-                    // load float src into A by truncation toward zero
-                    I[0] = static_cast<int32_t>(F[idx_float(src)]);
+            if (iss >> a) {
+                if (iss >> b) {
+                    // two-arg move: a = dest, b = src
+                    char dest = a, src = b;
+                    if (isIntReg(dest) && isIntReg(src)) {
+                        I[idx_int(dest)] = I[idx_int(src)];
+                    } else if (isFloatReg(dest) && isFloatReg(src)) {
+                        F[idx_float(dest)] = F[idx_float(src)];
+                    }
+                } else {
+                    // single-arg: load into A from register a
+                    char src = a;
+                    if (isIntReg(src)) {
+                        I[0] = I[idx_int(src)];
+                    } else if (isFloatReg(src)) {
+                        // load float src into A by truncation toward zero
+                        I[0] = static_cast<int32_t>(F[idx_float(src)]);
+                    }
                 }
             }
             break;
@@ -120,6 +121,9 @@ int32_t runVM(const std::vector<std::string>& instructions)
                 if (isIntReg(dest) && isIntReg(r1) && isIntReg(r2)) {
                     int64_t tmp = static_cast<int64_t>(I[idx_int(r1)]) + static_cast<int64_t>(I[idx_int(r2)]);
                     I[idx_int(dest)] = static_cast<int32_t>(tmp);
+                } else if (isFloatReg(dest) && isFloatReg(r1) && isFloatReg(r2)) {
+                    double tmp = F[idx_float(r1)] + F[idx_float(r2)];
+                    F[idx_float(dest)] = tmp;
                 }
             }
             break;
@@ -290,3 +294,4 @@ std::vector<std::string> fibonacciProgram(unsigned n)
 }
 
 } // namespace simplevm
+
