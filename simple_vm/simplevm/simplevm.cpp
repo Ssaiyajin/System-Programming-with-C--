@@ -134,7 +134,7 @@ int32_t runVM(const std::vector<std::string>& instructions)
         case 31: {
             char dest;
             if (!(iss >> dest)) break;
-            if (dest >= 'X' && dest <= 'W') {
+            if (isFloatReg(dest)) {
                 F[idx_float(dest)] = F[0];
             }
             break;
