@@ -47,7 +47,6 @@ class CleanTestDirectory {
                         perror("rmdir failed");
                         return 1;
                     }
-
                     break;
                 case FTW_F:
                 case FTW_SL:
@@ -56,10 +55,11 @@ class CleanTestDirectory {
                         perror("unlink failed");
                         return 1;
                     }
-
                     break;
+                default:
+                    // Unknown info code: ignore and continue
+                    return 0;
             }
-
             return 0;
         };
 
@@ -210,11 +210,11 @@ class DirectoryWatch {
 
     /// Check if a certain file or directory has been deleted in the directory
     bool expectDeleted(const string& name) {
-        pollfd fds[1];
+        std::array<pollfd, 1> fds;
         fds[0].fd = context.fd;
         fds[0].events = POLLIN;
 
-        int ret = poll(fds, 1, 500);
+        int ret = poll(fds.data(), static_cast<nfds_t>(fds.size()), 500);
 
         if (ret < 0) {
             perror("poll failed");
