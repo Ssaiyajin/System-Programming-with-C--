@@ -192,9 +192,12 @@ bool operator!=(const TrackedStructors&, const TrackedStructors&) {
 void testListAllocation_dummyEqualityOperators() {
     // This code exists only to remove warnings about the unused comparison
     // functions
-    TrackedStructors t;
-    static_cast<void>(t == t);
-    static_cast<void>(t != t);
+    // Compare two distinct objects to avoid the "both sides ... are equivalent"
+    // warning that arises when comparing the same variable to itself.
+    TrackedStructors t1;
+    TrackedStructors t2;
+    static_cast<void>(t1 == t2);
+    static_cast<void>(t1 != t2);
 }
 //---------------------------------------------------------------------------
 TEST(TestList, Allocation) {
