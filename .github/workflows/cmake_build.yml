@@ -20,8 +20,8 @@ jobs:
         project:
           - simple_vm
           - binary_max_heap
-          # - indirect_sorting
-          # - arithmetic_types
+          - indirect_sorting
+          - arithmetic_types
           # - bitset_container
           # - chaining_hash_table
           # - raii_temp_files
