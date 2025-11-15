@@ -96,7 +96,11 @@ bool TempDirectory::removeDirectory() noexcept {
         if (fs::exists(p) && fs::is_directory(p) && fs::is_empty(p)) {
             return fs::remove(p);
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        std::cerr << "removeDirectory error: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "removeDirectory unknown error" << std::endl;
+    }
     return false;
 }
 
@@ -112,7 +116,11 @@ void TempDirectory::removePath(const std::string& path) noexcept {
             for (const auto& f : createdFiles) {
                 try {
                     if (fs::path(f).parent_path() == p) children.push_back(f);
-                } catch (...) { /* ignore malformed entries */ }
+                } catch (const std::exception& e) {
+                    std::cerr << "removePath: malformed entry ignored: " << e.what() << std::endl;
+                } catch (...) {
+                    std::cerr << "removePath: malformed entry ignored (unknown error)" << std::endl;
+                }
             }
             for (const auto& f : children) {
                 if (fs::exists(f) && fs::is_regular_file(f)) {
