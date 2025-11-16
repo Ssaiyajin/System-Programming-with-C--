@@ -114,13 +114,15 @@ TEST(TestList, Move) {
     EXPECT_EQ(l.size(), 1);
 
     IntList l2(std::move(l));
-    // check the moved-to object rather than using the moved-from 'l'
-    EXPECT_EQ(l2.size(), 0);
+    // moved-to should have the element, moved-from should be empty
+    EXPECT_EQ(l2.size(), 1);
+    EXPECT_EQ(l.size(), 0);
 
     IntList l3;
     l3 = std::move(l2);
-    // check the moved-to object rather than using the moved-from 'l2'
-    EXPECT_EQ(l3.size(), 0);
+    // moved-to should have the element, moved-from should be empty
+    EXPECT_EQ(l3.size(), 1);
+    EXPECT_EQ(l2.size(), 0);
 }
 //---------------------------------------------------------------------------
 namespace {
