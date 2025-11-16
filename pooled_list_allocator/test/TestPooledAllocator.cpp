@@ -73,8 +73,8 @@ TEST(TestPooledAllocator, Move) {
     for (unsigned i = 0; i < 1000; ++i) {
         a.allocate();
     }
-    PooledAllocator<int> b(std::move(a));
+    PooledAllocator<int> b(move(a));
     PooledAllocator<int> c;
-    c = std::move(b);
+    c = move(b);
 }
 //---------------------------------------------------------------------------

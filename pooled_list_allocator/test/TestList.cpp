@@ -114,13 +114,13 @@ TEST(TestList, Move) {
     EXPECT_EQ(l.size(), 1);
 
     IntList l2(std::move(l));
-    // check the moved-to object rather than using the moved-from 'l'
-    EXPECT_EQ(l2.size(), 0);
+    EXPECT_EQ(l.size(), 0);
+    EXPECT_EQ(l2.size(), 1);
 
     IntList l3;
     l3 = std::move(l2);
-    // check the moved-to object rather than using the moved-from 'l2'
-    EXPECT_EQ(l3.size(), 0);
+    EXPECT_EQ(l2.size(), 0);
+    EXPECT_EQ(l3.size(), 1);
 }
 //---------------------------------------------------------------------------
 namespace {
@@ -141,36 +141,21 @@ void resetCounters() {
 //---------------------------------------------------------------------------
 template <typename T>
 class TestAllocator {
-public:
-    using value_type = T;
-    using pointer = T*;
-    using const_pointer = const T*;
-    using size_type = std::size_t;
-    using difference_type = std::ptrdiff_t;
-
+    public:
     template <typename U>
-    struct rebind { using other = TestAllocator<U>; };
+    using rebind = TestAllocator<U>;
 
     MallocAllocator<T> allocator;
 
-    TestAllocator() noexcept = default;
-
-    template <typename U>
-    TestAllocator(const TestAllocator<U>&) noexcept {}
-
-    // Standard allocator interface
-    pointer allocate(size_type n) {
+    T* allocate() {
         ++allocateCalls;
-        return allocator.allocate(n);
+        return allocator.allocate();
     }
 
-    void deallocate(pointer p, size_type n) {
+    void deallocate(T* ptr) {
         ++deallocateCalls;
-        allocator.deallocate(p, n);
+        allocator.deallocate(ptr);
     }
-
-    bool operator==(const TestAllocator&) const noexcept { return true; }
-    bool operator!=(const TestAllocator&) const noexcept { return false; }
 };
 //---------------------------------------------------------------------------
 class TrackedStructors {
@@ -192,12 +177,9 @@ bool operator!=(const TrackedStructors&, const TrackedStructors&) {
 void testListAllocation_dummyEqualityOperators() {
     // This code exists only to remove warnings about the unused comparison
     // functions
-    // Compare two distinct objects to avoid the "both sides ... are equivalent"
-    // warning that arises when comparing the same variable to itself.
-    TrackedStructors t1;
-    TrackedStructors t2;
-    static_cast<void>(t1 == t2);
-    static_cast<void>(t1 != t2);
+    TrackedStructors t;
+    static_cast<void>(t == t);
+    static_cast<void>(t != t);
 }
 //---------------------------------------------------------------------------
 TEST(TestList, Allocation) {
@@ -343,7 +325,7 @@ TEST(TestList, AllocationMove) {
     EXPECT_EQ(destructorCalls, 0);
 
     // Use move constructor
-    l3.emplace(std::move(*l2));
+    l3.emplace(move(*l2));
 
     EXPECT_EQ(allocateCalls, 20);
     EXPECT_EQ(deallocateCalls, 0);
@@ -352,7 +334,7 @@ TEST(TestList, AllocationMove) {
     EXPECT_EQ(destructorCalls, 0);
 
     // Use move assignment
-    *l2 = std::move(*l1);
+    *l2 = move(*l1);
 
     EXPECT_EQ(allocateCalls, 20);
     EXPECT_EQ(deallocateCalls, 0);
