@@ -389,7 +389,7 @@ TEST(TestListExtra, MoveTransferContents) {
 
     // moved should have the elements, moved-from should be empty
     EXPECT_EQ(moved.size(), 3u);
-    EXPECT_EQ(l.size(), 0u);
+    EXPECT_EQ(l.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
 
 TEST(TestListExtra, MoveAssignmentTransfer) {
@@ -403,7 +403,7 @@ TEST(TestListExtra, MoveAssignmentTransfer) {
     b = std::move(a);
 
     EXPECT_EQ(b.size(), 1u);
-    EXPECT_EQ(a.size(), 0u);
+    EXPECT_EQ(a.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
 
 TEST(TestListExtra, MoveDoesNotDuplicate) {
@@ -414,12 +414,12 @@ TEST(TestListExtra, MoveDoesNotDuplicate) {
 
     IntList dst(std::move(src));
     EXPECT_EQ(dst.size(), 1u);
-    EXPECT_EQ(src.size(), 0u);
+    EXPECT_EQ(src.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 
     // Mutate dst and ensure src remains empty
     dst.insert(8);
     EXPECT_EQ(dst.size(), 2u);
-    EXPECT_EQ(src.size(), 0u);
+    EXPECT_EQ(src.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
 
 TEST(MoveSemanticsTest, MoveConstructorTransfersContents) {
