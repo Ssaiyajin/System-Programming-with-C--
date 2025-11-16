@@ -1,75 +1,215 @@
 # System Programming with C++
 
-Collection of small C++ projects and exercises focused on systems-level programming techniques (data structures, allocators, a tiny VM, unit tests, CI and static analysis). Each subdirectory is a self-contained CMake project with tests and examples.
+A collection of small, focused C++ projects that explore **systems-level programming**, including data structures, custom allocators, bit-level containers, a tiny virtual machine, and tooling such as static analysis and unit testing. Each directory in this repository is a **self-contained CMake project** with its own build logic, tests, and examples.
 
-## Contents (selected)
-- arithmetic_ast — AST + evaluator for small arithmetic language
-- arithmetic_types — Complex / Rational types and tests
-- binary_max_heap — binary heap implementation & tests
-- bitset_container — custom BitSet implementation & tests
-- chaining_hash_table — hash table with chaining
-- indirect_sorting — pointer-based sorting utilities & tests
-- pooled_list_allocator — custom allocator + benchmarks/tests
-- simple_vm — a tiny instruction VM and assembler helpers
-- float_binary_stack, raii_temp_files, thread_safe_multimap, ... — additional exercises and examples
-- cmake/ — shared CMake helper modules (clang-tidy, googletest, benchmarks)
+---
 
-## Prerequisites
-- CMake 3.13+
-- A C++17-capable compiler (gcc/clang/MSVC)
-- Ninja or Make (optional)
-- Python (for some tooling/benchmarks)
-- Recommended developer tools:
-  - clang-format / clang-tidy (configs included)
-  - GoogleTest (bundled via cmake/thirdparty)
+## 📦 Contents (Selected)
 
-## Quick build (all projects)
-Run an out-of-source build from the repo root.
+Each subdirectory is a standalone project.
 
-Linux / macOS (bash):
-````bash
+* **arithmetic_ast** — AST + evaluator for a small arithmetic language
+* **arithmetic_types** — Complex & Rational number types with tests
+* **binary_max_heap** — Binary heap (max-heap) implementation
+* **bitset_container** — Custom BitSet container
+* **chaining_hash_table** — Hash table with chaining
+* **indirect_sorting** — Pointer- and index-based sorting utilities
+* **pooled_list_allocator** — Custom memory allocator + benchmarks
+* **simple_vm** — Tiny instruction-based virtual machine & assembler helpers
+* **float_binary_stack**, **raii_temp_files**, **thread_safe_multimap**, ... — Additional exercises & examples
+* **cmake/** — Shared helper modules (GoogleTest, clang-tidy, benchmarks)
+
+---
+
+## 🛠 Prerequisites
+
+* **CMake 3.13+**
+* **C++17-compatible compiler** (GCC, Clang, MSVC)
+* **Ninja or Make** (optional)
+* **Python** (for some benchmarks/tools)
+
+Recommended tools:
+
+* `clang-format`
+* `clang-tidy`
+* GoogleTest (bundled under `cmake/thirdparty`)
+
+---
+
+## 🚀 Quick Build (All Projects)
+
+### Linux / macOS
+
+```bash
 mkdir -p build && cd build
 cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug
 cmake --build . -- -j$(nproc)
-# Run all CTest tests if configured
-ctest --output-on-failure || true
-Creating build instructions
-Windows (PowerShell):
+```
+
+### Windows (PowerShell)
+
+```powershell
 mkdir build; cd build
 cmake -S .. -B . -A x64 -DCMAKE_BUILD_TYPE=Debug
 cmake --build . -- /m
-ctest --output-on-failure
+```
 
+---
 
+## 🧪 Running Tests
 
-Notes:
+> ⚠ **Note:** This repository does **not** use a single global CTest configuration. Each subproject produces its own test executables under a `test/` folder (for example `test/tester_*`). CI uses pattern-based discovery to run these.
 
-Some subprojects define their own top-level CMake files; the top-level CMake infrastructure will scan and configure subprojects using cmake/Infrastructure.cmake.
-If your CI logs show multiple tester_* binaries (e.g. test/tester_a), run all test binaries under build/test or use ctest which runs registered tests.
-Build / Run a single subproject
-Example: build only simple_vm:
+### Run tests manually
 
-Or run an executable directly:
+From a subproject build directory:
 
-Static analysis and formatting
-clang-tidy configuration: .clang-tidy and helper CMake module cmake/FindClangTidy.cmake are provided.
-clang-format config: .clang-format
-Run formatting:
-Run clang-tidy (example):
+```bash
+ls test
+# example output:
+# tester_arithmetic
+# tester_hash_table
 
-Testing
-Tests use GoogleTest (bundled via cmake/thirdparty/googletest).
-After building, run:
-If tests are emitted as multiple tester* executables, run them directly:
+./test/tester_arithmetic
+./test/tester_hash_table
+```
 
-Benchmarks
-Some projects include benchmark/ directories using Google Benchmark (bundled in cmake/thirdparty). Build and run the benchmark targets produced by CMake.
+Common test naming patterns supported by CI:
 
-Common issues & tips
-"No such file or directory" when CI tries ./test/tester: your build may produce multiple tester_* binaries (e.g. tester_a). Use find or ctest to locate/run them (see above).
-clang-tidy warnings: the repo intentionally exposes many examples that trigger static analysis. Use the included NOLINT annotations where appropriate, or adjust the checks in .clang-tidy.
-If clang-tidy emits "logical expression is always false" for char-range checks, prefer explicit predicates (e.g. isIntReg() / isFloatReg()) or correct the character ranges.
-Contributing
-Create topic branches per change.
-Follow the repository clang-format rules before push.
-Add/extend tests for bug fixes.
+* `test`
+* `test/tester_*`
+* `test/tester`
+
+If your project builds multiple tester binaries (e.g. `tester_a`, `tester_b`), run them all or use the provided CI pattern logic.
+
+---
+
+## 🏗 Building / Running a Single Subproject
+
+Example: `simple_vm`
+
+```bash
+mkdir -p build_simple_vm
+cmake -S simple_vm -B build_simple_vm -DCMAKE_BUILD_TYPE=Debug
+cmake --build build_simple_vm
+```
+
+Run tests (if present):
+
+```bash
+./build_simple_vm/test/tester_vm
+```
+
+Run example programs:
+
+```bash
+./build_simple_vm/simple_vm_example
+```
+
+---
+
+## 📊 Benchmarks
+
+Some subprojects include `benchmark/` directories using Google Benchmark (bundled in `cmake/thirdparty`). Build and run targets produced by CMake:
+
+```bash
+cmake --build build --target benchmark_pooled_list_allocator
+./build/benchmark/benchmark_pooled_list_allocator
+```
+
+---
+
+## 🧹 Code Quality Tools
+
+### clang-format
+
+```bash
+clang-format -i $(find . -name '*.cpp' -o -name '*.hpp')
+```
+
+### clang-tidy
+
+Run via CMake:
+
+```bash
+cmake -S . -B build -DCMAKE_CXX_CLANG_TIDY="clang-tidy"
+cmake --build build
+```
+
+Configuration files included in the repo:
+
+* `.clang-format`
+* `.clang-tidy`
+* `cmake/FindClangTidy.cmake`
+
+---
+
+## 🔍 Common Issues & Tips
+
+### "No test executable found"
+
+Some projects intentionally produce multiple test binaries (e.g. `tester_a`, `tester_b`) or name them inconsistently. The CI uses patterns to find test executables; if none match the patterns, testing for that project will be skipped and the job will continue.
+
+Example local discovery command:
+
+```bash
+find build -type f -executable -name "tester*"
+```
+
+### clang-tidy warnings
+
+Several examples intentionally demonstrate code patterns that trigger static analysis warnings for educational purposes. Suppress with `// NOLINT` where appropriate or update `.clang-tidy` to relax specific checks.
+
+### Character-range static analysis issues
+
+If clang-tidy warns about "logical expression is always false" when using char ranges, prefer small predicate helper functions:
+
+```cpp
+bool isIntReg(char c);
+bool isFloatReg(char c);
+```
+
+---
+
+## 🤖 GitHub Actions (CI) Integration
+
+CI jobs are structured per-project. Each job builds the project into `build_${{ matrix.project }}` and then attempts to run test executables using flexible patterns, for example:
+
+```bash
+patterns=( "test" "test/tester_*" "test/tester" )
+for pat in "${patterns[@]}"; do
+  for exe in $pat; do
+    if [ -f "$exe" ] && [ -x "$exe" ]; then
+      echo "Running $exe"
+      "$exe"
+    fi
+  done
+done
+```
+
+This avoids needing a global `ctest` setup and allows each subproject to maintain its independent test layout.
+
+---
+
+## 🤝 Contributing
+
+* Create feature/topic branches
+* Follow the repository's clang-format rules before committing
+* Add or extend tests when fixing bugs or adding features
+* Open PRs against `main` with a clear description and test coverage
+
+---
+
+## 📝 License
+
+(Replace with your license of choice — e.g. MIT)
+
+---
+
+If you'd like, I can also:
+
+* add a **badges** block (build, lint, license)
+* create a **CONTRIBUTING.md** and **GitHub Actions** workflow YAML for you
+* add per-project `README.md` stubs that show how to build and run each project
+
+Tell me which of the above you want next.
