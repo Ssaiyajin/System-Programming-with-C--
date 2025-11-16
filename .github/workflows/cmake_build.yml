@@ -54,11 +54,29 @@ jobs:
           set -euo pipefail
           cmake --build "build_${{ matrix.project }}" -- -j$(nproc)
 
-      - name: Run tests (if test executable exists)
-        working-directory: "build_${{ matrix.project }}"
+      - name: Run tests
+        working-directory: build
         continue-on-error: true
         run: |
-          ./test/tester  # runs your test executable
+          set -euo pipefail
+          # Prefer ctest if available and configured
+          if command -v ctest >/dev/null 2>&1 && [ -f CTestTestfile.cmake ]; then
+            ctest --output-on-failure || true
+          else
+            # Locate and run any tester* executables produced by the build
+            found=0
+            while IFS= read -r -d '' exe; do
+              echo "Running $exe"
+              "$exe" || true
+              found=1
+            done < <(find . -type f -executable -name 'tester*' -print0)
+            if [ "$found" -eq 0 ]; then
+              echo "No tester* executable found in ${PWD}"
+              echo "Build directory listing:"
+              ls -la || true
+              exit 1
+            fi
+          fi
 
   lint:
     name: Lint - ${{ matrix.project }}
