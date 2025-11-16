@@ -5,29 +5,38 @@
 #include <cstdlib>
 #include <new>
 #include <type_traits>
+#include <limits>
+#include <utility>
 
 namespace pool {
 
 template <typename T>
 class MallocAllocator {
 public:
-    // Standard allocator typedefs
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
+    using reference = T&;
+    using const_reference = const T&;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    // rebind for old-style uses
+    // old-style rebind
     template <typename U>
     struct rebind { using other = MallocAllocator<U>; };
+
+    // traits used by some concepts
+    using propagate_on_container_copy_assignment = std::false_type;
+    using propagate_on_container_move_assignment = std::true_type;
+    using propagate_on_container_swap = std::false_type;
+    using is_always_equal = std::true_type;
 
     MallocAllocator() noexcept = default;
 
     template <typename U>
     MallocAllocator(const MallocAllocator<U>&) noexcept {}
 
-    // Preferred allocator interface for allocator_traits
+    // allocate/deallocate expected by allocator_traits
     pointer allocate(size_type n) {
         if (n == 0) return nullptr;
         void* p = std::malloc(n * sizeof(value_type));
@@ -39,7 +48,7 @@ public:
         std::free(p);
     }
 
-    // Convenience single-object allocate/deallocate used in tests
+    // convenience single-object API used by tests
     pointer allocate() {
         return allocate(1);
     }
@@ -48,7 +57,23 @@ public:
         deallocate(p, 1);
     }
 
-    // Equality required by many allocator concepts
+    // Construct/destroy (some allocator concepts check for these)
+    template <typename U, typename... Args>
+    void construct(U* p, Args&&... args) {
+        ::new (static_cast<void*>(p)) U(std::forward<Args>(args)...);
+    }
+
+    template <typename U>
+    void destroy(U* p) noexcept {
+        p->~U();
+    }
+
+    // Helpers
+    size_type max_size() const noexcept {
+        return std::numeric_limits<size_type>::max() / sizeof(value_type);
+    }
+
+    // equality for allocator concepts
     bool operator==(const MallocAllocator&) const noexcept { return true; }
     bool operator!=(const MallocAllocator& other) const noexcept { return !(*this == other); }
 };
