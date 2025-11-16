@@ -63,7 +63,7 @@ jobs:
             echo "Looking for test executables..."
             ls -l test || true
 
-            for exe in test/tester_*; do
+            for exe in test/tester; do
               if [ -x "$exe" ]; then
                 echo "Running $exe"
                 "$exe"
