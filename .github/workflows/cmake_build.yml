@@ -18,16 +18,8 @@ jobs:
     strategy:
       matrix:
         project:
-          # - simple_vm
-          # - binary_max_heap
-          # - indirect_sorting
-          # - arithmetic_types
-          # - bitset_container
-          # - chaining_hash_table
-          # - raii_temp_files
-          # - arithmetic_ast
           - pooled_list_allocator
-          # - thread_safe_multimap
+          # add other projects here as needed
 
     steps:
       - name: Checkout repository
@@ -39,40 +31,42 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake clang-tidy ninja-build
 
-      - name: Cleanup previous build directories
+      - name: Cleanup previous build + lint directories
         run: |
           set -euo pipefail
-           rm -rf "build_${{ matrix.project }}" "lint_${{ matrix.project }}" || true
-      
+          rm -rf "build_${{ matrix.project }}" "lint_${{ matrix.project }}" || true
+
       - name: Configure CMake (generate build dir + compile_commands.json)
         run: |
-            set -euo pipefail
-            cmake -S "${{ matrix.project }}" -B "build_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          set -euo pipefail
+          cmake -S "${{ matrix.project }}" -B "build_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build project
         run: |
           set -euo pipefail
           cmake --build "build_${{ matrix.project }}" -- -j$(nproc)
 
-      - name: Run tests
-        working-directory: build
-        continue-on-error: true
+      - name: Run tests (ctest or tester* fallback)
         run: |
           set -euo pipefail
-          # Prefer ctest if available and configured
+          BUILD_DIR="build_${{ matrix.project }}"
+          if [ ! -d "$BUILD_DIR" ]; then
+            echo "Build directory '$BUILD_DIR' not found"
+            ls -la || true
+            exit 1
+          fi
+          cd "$BUILD_DIR"
           if command -v ctest >/dev/null 2>&1 && [ -f CTestTestfile.cmake ]; then
-            ctest --output-on-failure || true
+            ctest --output-on-failure
           else
-            # Locate and run any tester* executables produced by the build
             found=0
             while IFS= read -r -d '' exe; do
               echo "Running $exe"
-              "$exe" || true
+              "$exe"
               found=1
             done < <(find . -type f -executable -name 'tester*' -print0)
             if [ "$found" -eq 0 ]; then
               echo "No tester* executable found in ${PWD}"
-              echo "Build directory listing:"
               ls -la || true
               exit 1
             fi
@@ -85,16 +79,8 @@ jobs:
     strategy:
       matrix:
         project:
-          # - simple_vm
-          # - binary_max_heap
-          # - indirect_sorting
-          # - arithmetic_types
-          # - bitset_container
-          # - chaining_hash_table
-          # - raii_temp_files
-          # - arithmetic_ast
           - pooled_list_allocator
-          # - thread_safe_multimap
+          # add other projects here as needed
 
     steps:
       - name: Checkout repository
@@ -114,11 +100,11 @@ jobs:
       - name: Run clang-tidy lint (if compile_commands.json exists)
         run: |
           set -euo pipefail
-          if [ -f "lint_${{ matrix.project }}/compile_commands.json" ]; then
+          LINT_DIR="lint_${{ matrix.project }}"
+          if [ -f "${LINT_DIR}/compile_commands.json" ]; then
             echo "Running clang-tidy for project: ${{ matrix.project }}"
-            # Run clang-tidy over common C/C++ source file extensions. Limit parallelism to avoid overload.
             find "${{ matrix.project }}" -type f \( -name '*.cpp' -o -name '*.cc' -o -name '*.cxx' -o -name '*.c' \) -print0 \
-              | xargs -0 -n1 -P2 -I{} clang-tidy "{}" -p "lint_${{ matrix.project }}" || true
+              | xargs -0 -n1 -P2 -I{} sh -c 'clang-tidy "{}" -p "'"${LINT_DIR}"'" || true'
           else
             echo "compile_commands.json not found for ${{ matrix.project }} — skipping clang-tidy"
           fi
