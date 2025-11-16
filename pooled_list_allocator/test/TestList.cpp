@@ -419,4 +419,58 @@ TEST(TestListExtra, MoveDoesNotDuplicate) {
     EXPECT_EQ(dst.size(), 2u);
     EXPECT_EQ(src.size(), 0u);
 }
+
+TEST(MoveSemanticsTest, MoveConstructorTransfersContents) {
+    IntList src;
+    EXPECT_EQ(src.size(), 0u);
+    src.insert(123);
+    EXPECT_EQ(src.size(), 1u);
+    src.insert(456);
+    EXPECT_EQ(src.size(), 2u);
+
+    IntList dst(std::move(src));
+
+    // dst should acquire the elements, src should become empty
+    EXPECT_EQ(dst.size(), 2u);
+    EXPECT_EQ(src.size(), 0u);
+}
+
+TEST(MoveSemanticsTest, MoveAssignmentTransfersContents) {
+    IntList a;
+    EXPECT_EQ(a.size(), 0u);
+    a.insert(42);
+    EXPECT_EQ(a.size(), 1u);
+
+    IntList b;
+    b = std::move(a);
+
+    EXPECT_EQ(b.size(), 1u);
+    EXPECT_EQ(a.size(), 0u);
+}
+
+TEST(MoveSemanticsTest, MoveDoesNotDuplicateAfterMutation) {
+    IntList src;
+    src.insert(7);
+    EXPECT_EQ(src.size(), 1u);
+
+    IntList dst(std::move(src));
+    EXPECT_EQ(dst.size(), 1u);
+    EXPECT_EQ(src.size(), 0u);
+
+    dst.insert(8);
+    EXPECT_EQ(dst.size(), 2u);
+    EXPECT_EQ(src.size(), 0u);
+}
+
+TEST(MoveSemanticsTest, SelfMoveAssignmentIsSafe) {
+    IntList x;
+    x.insert(1);
+    x.insert(2);
+    const auto before = x.size();
+
+    // self-move should not corrupt container (implementation-defined but should be safe)
+    x = std::move(x);
+
+    EXPECT_EQ(x.size(), before);
+}
 //---------------------------------------------------------------------------
