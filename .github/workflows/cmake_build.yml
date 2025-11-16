@@ -48,6 +48,7 @@ jobs:
 
       - name: Run tests (ctest or tester* fallback)
         run: |
+          ls -r --l
           ./test/tester
   lint:
     name: Lint - ${{ matrix.project }}
