@@ -142,6 +142,13 @@ void resetCounters() {
 template <typename T>
 class TestAllocator {
     public:
+    // Provide the standard allocator typedefs required by std::allocator_traits
+    using value_type = T;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+
     template <typename U>
     using rebind = TestAllocator<U>;
 
