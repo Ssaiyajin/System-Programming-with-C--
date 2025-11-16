@@ -42,10 +42,12 @@ public:
         }
     }
 
-    // move ctor
+    // Move constructor: steal internal state and leave `other` empty.
     List(List&& other) noexcept
-      : head_(other.head_), tail_(other.tail_), size_(other.size_), nodeAlloc_(std::move(other.nodeAlloc_)) {
-        other.head_ = other.tail_ = nullptr;
+        : head_(other.head_), tail_(other.tail_), size_(other.size_), alloc_(std::move(other.alloc_))
+    {
+        other.head_ = nullptr;
+        other.tail_ = nullptr;
         other.size_ = 0;
     }
 
@@ -60,15 +62,16 @@ public:
         return *this;
     }
 
-    // move assign
+    // Move assignment: free current resources, steal from other, leave other empty.
     List& operator=(List&& other) noexcept {
         if (this == &other) return *this;
-        clear_nodes();
-        nodeAlloc_ = std::move(other.nodeAlloc_);
+        clear(); // free nodes held by *this — keep your existing clear()/destroy implementation
         head_ = other.head_;
         tail_ = other.tail_;
         size_ = other.size_;
-        other.head_ = other.tail_ = nullptr;
+        alloc_ = std::move(other.alloc_);
+        other.head_ = nullptr;
+        other.tail_ = nullptr;
         other.size_ = 0;
         return *this;
     }
