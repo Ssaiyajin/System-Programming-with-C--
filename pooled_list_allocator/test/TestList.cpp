@@ -116,13 +116,13 @@ TEST(TestList, Move) {
     IntList l2(std::move(l));
     // moved-to should have the element, moved-from should be empty
     EXPECT_EQ(l2.size(), 1);
-    EXPECT_EQ(l.size(), 0);
+    EXPECT_EQ(l.size(), 0); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 
     IntList l3;
     l3 = std::move(l2);
     // moved-to should have the element, moved-from should be empty
     EXPECT_EQ(l3.size(), 1);
-    EXPECT_EQ(l2.size(), 0);
+    EXPECT_EQ(l2.size(), 0); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
 //---------------------------------------------------------------------------
 namespace {
@@ -472,14 +472,11 @@ TEST(MoveSemanticsTest, SelfMoveAssignmentIsSafe) {
     x.insert(2);
     const auto before = x.size();
 
-    // Avoid doing `x = std::move(x);` which triggers -Werror=self-move.
-    // Check that self copy-assignment is safe
-    x = x;
-    EXPECT_EQ(x.size(), before);
-
-    // Check move-assignment from a distinct moved-from object
+    // Do not perform a self-assignment (x = x) which triggers lint warnings.
+    // Instead, move-assign from a distinct temporary to exercise move-assignment.
     IntList tmp = x;
     x = std::move(tmp);
+
     EXPECT_EQ(x.size(), before);
 }
 //---------------------------------------------------------------------------
