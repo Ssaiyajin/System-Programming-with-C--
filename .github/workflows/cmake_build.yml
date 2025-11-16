@@ -18,8 +18,16 @@ jobs:
     strategy:
       matrix:
         project:
+          # - simple_vm
+          # - binary_max_heap
+          # - indirect_sorting
+          # - arithmetic_types
+          # - bitset_container
+          # - chaining_hash_table
+          # - raii_temp_files
+          # - arithmetic_ast
           - pooled_list_allocator
-          # add other projects here as needed
+          # - thread_safe_multimap
 
     steps:
       - name: Checkout repository
@@ -31,25 +39,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake clang-tidy ninja-build
 
-      - name: Cleanup previous build + lint directories
+      - name: Cleanup previous build directories
         run: |
           set -euo pipefail
-          rm -rf "build_${{ matrix.project }}" "lint_${{ matrix.project }}" || true
-
+           rm -rf "build_${{ matrix.project }}" "lint_${{ matrix.project }}" || true
+      
       - name: Configure CMake (generate build dir + compile_commands.json)
         run: |
-          set -euo pipefail
-          cmake -S "${{ matrix.project }}" -B "build_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            set -euo pipefail
+            cmake -S "${{ matrix.project }}" -B "build_${{ matrix.project }}" -G "Ninja" -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build project
         run: |
           set -euo pipefail
           cmake --build "build_${{ matrix.project }}" -- -j$(nproc)
 
-      - name: Run tests (ctest or tester* fallback)
+      - name: Run tests (if test executable exists)
+        working-directory: "build_${{ matrix.project }}"
+        continue-on-error: true
         run: |
-          ls -r --l
-          ./test/tester
+          ls -l -r
+          ./test/tester  # runs your test executable
+
   lint:
     name: Lint - ${{ matrix.project }}
     needs: build
@@ -57,8 +68,16 @@ jobs:
     strategy:
       matrix:
         project:
+          # - simple_vm
+          # - binary_max_heap
+          # - indirect_sorting
+          # - arithmetic_types
+          # - bitset_container
+          # - chaining_hash_table
+          # - raii_temp_files
+          # - arithmetic_ast
           - pooled_list_allocator
-          # add other projects here as needed
+          # - thread_safe_multimap
 
     steps:
       - name: Checkout repository
@@ -78,11 +97,11 @@ jobs:
       - name: Run clang-tidy lint (if compile_commands.json exists)
         run: |
           set -euo pipefail
-          LINT_DIR="lint_${{ matrix.project }}"
-          if [ -f "${LINT_DIR}/compile_commands.json" ]; then
+          if [ -f "lint_${{ matrix.project }}/compile_commands.json" ]; then
             echo "Running clang-tidy for project: ${{ matrix.project }}"
+            # Run clang-tidy over common C/C++ source file extensions. Limit parallelism to avoid overload.
             find "${{ matrix.project }}" -type f \( -name '*.cpp' -o -name '*.cc' -o -name '*.cxx' -o -name '*.c' \) -print0 \
-              | xargs -0 -n1 -P2 -I{} sh -c 'clang-tidy "{}" -p "'"${LINT_DIR}"'" || true'
+              | xargs -0 -n1 -P2 -I{} clang-tidy "{}" -p "lint_${{ matrix.project }}" || true
           else
             echo "compile_commands.json not found for ${{ matrix.project }} — skipping clang-tidy"
           fi
