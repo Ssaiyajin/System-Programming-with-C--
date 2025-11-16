@@ -1,62 +1,60 @@
-#include "lib/MallocAllocator.hpp"
-#include "test/AllocatorConcept.hpp"
+#ifndef H_lib_MallocAllocator.hpp"
+#define H_lib_MallocAllocatorpt.hpp"
+#pragma oncetddef>
 #include <cstddef>
-#include <cstdint>
-#include <unordered_set>
-#include <gtest/gtest.h>
-//---------------------------------------------------------------------------
+#include <cstdlib>d_set>
+#include <new>t/gtest.h>
+#include <type_traits>-------------------------------------------------------
 using namespace pool;
-using namespace std;
-//---------------------------------------------------------------------------
-namespace {
+namespace pool {std;
 //---------------------------------------------------------------------------
 template <typename T>
-class ScopedMallocAllocator {
-    private:
-    MallocAllocator<T> allocator;
-    unordered_set<T*> allocations;
-
-    public:
+class MallocAllocator {------------------------------------------------------
+public:e <typename T>
+    // Standard allocator typedefs required by std::allocator_traits / concepts
+    using value_type = T;
+    using pointer = T*;allocator;
+    using const_pointer = const T*;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
     ~ScopedMallocAllocator() {
-        for (auto* ptr : allocations)
-            allocator.deallocate(ptr);
-    }
+    // rebind (old-style) and conversion ctorions)
+    template <typename U>llocate(ptr);
+    struct rebind { using other = MallocAllocator<U>; };
 
-    T* allocate() {
-        T* result = allocator.allocate();
-        allocations.insert(result);
-        return result;
-    }
+    MallocAllocator() noexcept = default;
+    template <typename U>        T* result = allocator.allocate();
+    MallocAllocator(const MallocAllocator<U>&) noexcept {}t(result);
 
-    void deallocate(T* ptr) {
-        allocator.deallocate(ptr);
-        allocations.erase(ptr);
+    // allocator_traits-compatible interface    }
+    pointer allocate(size_type n) {
+        if (n == 0) return nullptr;
+        void* p = std::malloc(n * sizeof(value_type));
+        if (!p) throw std::bad_alloc();
+        return static_cast<pointer>(p);
     }
+------------------------------------------------------------------------
+    void deallocate(pointer p, size_type /*n*/) noexcept {} // namespace
+        std::free(p);-------------------
+    }tor, Concept) {
+truct Foo {
+    // Convenience single-object allocation used by tests        Foo(const Foo&) = delete;
+    pointer allocate() {
+        return allocate(1);onst Foo&) = delete;
+    }&) = delete;
+;
+    void deallocate(pointer p) noexcept {    // You can change EXPECT_TRUE to static_assert in the following lines to
+        deallocate(p, 1);hat explain why the test fails.
+    }llocator<MallocAllocator<int>>);
+XPECT_TRUE(test::IsAllocator<MallocAllocator<Foo>>);
+    // equality for allocator concepts}
+    bool operator==(const MallocAllocator&) const noexcept { return true; }--------------------------
+    bool operator!=(const MallocAllocator& other) const noexcept { return !(*this == other); }
 };
-//---------------------------------------------------------------------------
-} // namespace
-//---------------------------------------------------------------------------
-TEST(TestMallocAllocator, Concept) {
-    struct Foo {
-        Foo(const Foo&) = delete;
-        Foo(Foo&&) = delete;
-        Foo& operator=(const Foo&) = delete;
-        Foo& operator=(Foo&&) = delete;
-    };
-    // You can change EXPECT_TRUE to static_assert in the following lines to
-    // get more detailed error messages that explain why the test fails.
-    EXPECT_TRUE(test::IsAllocator<MallocAllocator<int>>);
-    EXPECT_TRUE(test::IsAllocator<MallocAllocator<Foo>>);
-}
-//---------------------------------------------------------------------------
-TEST(TestMallocAllocator, AllocateInt) {
-    ScopedMallocAllocator<int> a;
-    int* i = a.allocate();
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(int), 0);
-    int* j = a.allocate();
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(int), 0);
-    EXPECT_NE(i, j);
-}
+  int* i = a.allocate();
+} // namespace pool    EXPECT_EQ(reinterpret_cast<uintptr_t>(i) % alignof(int), 0);
+cate();
+#endif // H_lib_MallocAllocator    EXPECT_EQ(reinterpret_cast<uintptr_t>(j) % alignof(int), 0);
 //---------------------------------------------------------------------------
 TEST(TestMallocAllocator, AllocateLargeAlignType) {
     using LargeAlignType = std::max_align_t;
