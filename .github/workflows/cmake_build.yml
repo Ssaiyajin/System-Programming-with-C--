@@ -48,30 +48,7 @@ jobs:
 
       - name: Run tests (ctest or tester* fallback)
         run: |
-          set -euo pipefail
-          BUILD_DIR="build_${{ matrix.project }}"
-          if [ ! -d "$BUILD_DIR" ]; then
-            echo "Build directory '$BUILD_DIR' not found"
-            ls -la || true
-            exit 1
-          fi
-          cd "$BUILD_DIR"
-          if command -v ctest >/dev/null 2>&1 && [ -f CTestTestfile.cmake ]; then
-            ctest --output-on-failure
-          else
-            found=0
-            while IFS= read -r -d '' exe; do
-              echo "Running $exe"
-              "$exe"
-              found=1
-            done < <(find . -type f -executable -name 'tester*' -print0)
-            if [ "$found" -eq 0 ]; then
-              echo "No tester* executable found in ${PWD}"
-              ls -la || true
-              exit 1
-            fi
-          fi
-
+          ./test/tester
   lint:
     name: Lint - ${{ matrix.project }}
     needs: build
