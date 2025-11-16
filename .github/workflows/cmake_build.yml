@@ -28,6 +28,8 @@ jobs:
           - arithmetic_ast
           - pooled_list_allocator
           - thread_safe_multimap
+      # run matrix items one at a time (sequential)
+      max-parallel: 1
 
     steps:
       - name: Checkout repository
