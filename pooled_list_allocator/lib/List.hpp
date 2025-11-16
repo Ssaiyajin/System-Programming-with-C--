@@ -42,12 +42,10 @@ public:
         }
     }
 
-    // Move constructor: steal internal state and leave `other` empty.
+    // move ctor
     List(List&& other) noexcept
-        : head_(other.head_), tail_(other.tail_), size_(other.size_), alloc_(std::move(other.alloc_))
-    {
-        other.head_ = nullptr;
-        other.tail_ = nullptr;
+      : head_(other.head_), tail_(other.tail_), size_(other.size_), nodeAlloc_(std::move(other.nodeAlloc_)) {
+        other.head_ = other.tail_ = nullptr;
         other.size_ = 0;
     }
 
@@ -62,16 +60,15 @@ public:
         return *this;
     }
 
-    // Move assignment: free current resources, steal from other, leave other empty.
+    // move assign
     List& operator=(List&& other) noexcept {
         if (this == &other) return *this;
-        clear(); // free nodes held by *this — keep your existing clear()/destroy implementation
+        clear_nodes();
+        nodeAlloc_ = std::move(other.nodeAlloc_);
         head_ = other.head_;
         tail_ = other.tail_;
         size_ = other.size_;
-        alloc_ = std::move(other.alloc_);
-        other.head_ = nullptr;
-        other.tail_ = nullptr;
+        other.head_ = other.tail_ = nullptr;
         other.size_ = 0;
         return *this;
     }
@@ -195,3 +192,59 @@ private:
 } // namespace pool
 
 #endif // POOL_LIST_HPP
+// C++
+#include "lib/List.hpp"
+#include "lib/MallocAllocator.hpp"
+#include <gtest/gtest.h>
+
+using namespace pool;
+using namespace std;
+
+TEST(TestListExtra, MoveTransferContents) {
+    using IntList = List<int, MallocAllocator<int>>;
+    IntList l;
+    EXPECT_EQ(l.size(), 0u);
+    l.insert(1);
+    EXPECT_EQ(l.size(), 1u);
+    l.insert(2);
+    EXPECT_EQ(l.size(), 2u);
+    l.insert(3);
+    EXPECT_EQ(l.size(), 3u);
+
+    // move-construct
+    IntList moved(std::move(l));
+
+    // moved should have the elements, moved-from should be empty
+    EXPECT_EQ(moved.size(), 3u);
+    EXPECT_EQ(l.size(), 0u);
+}
+
+TEST(TestListExtra, MoveAssignmentTransfer) {
+    using IntList = List<int, MallocAllocator<int>>;
+    IntList a;
+    EXPECT_EQ(a.size(), 0u);
+    a.insert(42);
+    EXPECT_EQ(a.size(), 1u);
+
+    IntList b;
+    b = std::move(a);
+
+    EXPECT_EQ(b.size(), 1u);
+    EXPECT_EQ(a.size(), 0u);
+}
+
+TEST(TestListExtra, MoveDoesNotDuplicate) {
+    using IntList = List<int, MallocAllocator<int>>;
+    IntList src;
+    src.insert(7);
+    EXPECT_EQ(src.size(), 1u);
+
+    IntList dst(std::move(src));
+    EXPECT_EQ(dst.size(), 1u);
+    EXPECT_EQ(src.size(), 0u);
+
+    // Mutate dst and ensure src remains empty
+    dst.insert(8);
+    EXPECT_EQ(dst.size(), 2u);
+    EXPECT_EQ(src.size(), 0u);
+}
