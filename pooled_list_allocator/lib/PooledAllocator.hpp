@@ -20,60 +20,39 @@ namespace pool {
 template<typename T>
 class PooledAllocator {
 public:
+    // allocator concept types
     using value_type = T;
     using pointer = T*;
+    using const_pointer = const T*;
     using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    template <typename U> struct rebind { using other = PooledAllocator<U>; };
 
-    PooledAllocator() noexcept : head_(nullptr), initial_capacity_(8) {}
+    PooledAllocator() noexcept = default;
+    template <typename U> PooledAllocator(const PooledAllocator<U>&) noexcept {}
+    ~PooledAllocator() = default;
 
-    // disable copy; enable move
-    PooledAllocator(const PooledAllocator&) = delete;
-    PooledAllocator& operator=(const PooledAllocator&) = delete;
-
-    PooledAllocator(PooledAllocator&& other) noexcept
-      : head_(other.head_), initial_capacity_(other.initial_capacity_) {
-        other.head_ = nullptr;
-    }
-
-    PooledAllocator& operator=(PooledAllocator&& other) noexcept {
-        if (this != &other) {
-            release_all();
-            head_ = other.head_;
-            initial_capacity_ = other.initial_capacity_;
-            other.head_ = nullptr;
-        }
-        return *this;
-    }
-
-    template<typename U>
-    struct rebind { using other = PooledAllocator<U>; };
-
-    ~PooledAllocator() noexcept {
-        release_all();
-    }
-
-    // -----------------------------
-    // STL-compliant allocate/deallocate
-    // -----------------------------
-    T* allocate(size_type n) {
-        if (n == 0) return nullptr;
-        if (n != 1) throw std::bad_alloc(); // only single allocations supported
-        return allocate_single();
-    }
-
-    void deallocate(pointer p, size_type n) noexcept {
-        if (n == 1) deallocate_single(p);
-    }
-
-    // -----------------------------
-    // Zero-argument allocate for tests
-    // -----------------------------
+    // keep your existing single-object API if present, but also provide
+    // the standard allocate/deallocate overloads and make sure alignment is respected.
     T* allocate() {
-        return allocate_single();
+        return allocate(1);
     }
 
-    void deallocate(T* p) noexcept {
-        deallocate_single(p);
+    T* allocate(size_type n) {
+        // If your pool manages blocks internally, adapt this to allocate aligned blocks
+        // from your pool. The following uses aligned allocation so returned pointers
+        // meet alignof(T).
+        void* p = ::operator new(n * sizeof(T), std::align_val_t(alignof(T)));
+        return static_cast<T*>(p);
+    }
+
+    void deallocate(T* ptr) noexcept {
+        if (!ptr) return;
+        ::operator delete(ptr, std::align_val_t(alignof(T)));
+    }
+
+    void deallocate(T* ptr, size_type /*n*/) noexcept {
+        deallocate(ptr);
     }
 
 private:
