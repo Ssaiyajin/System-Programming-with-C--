@@ -58,8 +58,19 @@ jobs:
         working-directory: "build_${{ matrix.project }}"
         continue-on-error: true
         run: |
-          ls -l -r
-          ./test/tester  # runs your test executable
+          ls -R test
+            set -euo pipefail
+            echo "Looking for test executables..."
+            ls -l test || true
+
+            for exe in test/tester_*; do
+              if [ -x "$exe" ]; then
+                echo "Running $exe"
+                "$exe"
+              else
+                echo "No test executables found matching test/tester_*"
+              fi
+            done
 
   lint:
     name: Lint - ${{ matrix.project }}
