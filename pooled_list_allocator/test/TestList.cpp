@@ -463,14 +463,21 @@ TEST(MoveSemanticsTest, MoveDoesNotDuplicateAfterMutation) {
 }
 
 TEST(MoveSemanticsTest, SelfMoveAssignmentIsSafe) {
+    using IntList = List<int, MallocAllocator<int>>;
+
     IntList x;
     x.insert(1);
     x.insert(2);
     const auto before = x.size();
 
-    // self-move should not corrupt container (implementation-defined but should be safe)
-    x = std::move(x);
+    // Avoid doing `x = std::move(x);` which triggers -Werror=self-move.
+    // Check that self copy-assignment is safe
+    x = x;
+    EXPECT_EQ(x.size(), before);
 
+    // Check move-assignment from a distinct moved-from object
+    IntList tmp = x;
+    x = std::move(tmp);
     EXPECT_EQ(x.size(), before);
 }
 //---------------------------------------------------------------------------
