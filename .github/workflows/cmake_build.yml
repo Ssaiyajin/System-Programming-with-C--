@@ -58,19 +58,33 @@ jobs:
         working-directory: "build_${{ matrix.project }}"
         continue-on-error: true
         run: |
-          ls -R test
-            set -euo pipefail
-            echo "Looking for test executables..."
-            ls -l test || true
+          set -euo pipefail
+          echo "Looking for test executables..."
+          ls -l test || true
 
-            for exe in test/tester; do
-              if [ -x "$exe" ]; then
+          # Select patterns per-project
+          if [ "${{ matrix.project }}" = "pooled_list_allocator" ]; then
+            patterns=( "test/tester_*" )
+          else
+            # try a few common patterns for other projects
+            patterns=( "test" "test/tester_*" "test/tester" )
+          fi
+
+          shopt -s nullglob
+          found=0
+          for pat in "${patterns[@]}"; do
+            for exe in $pat; do
+              if [ -f "$exe" ] && [ -x "$exe" ]; then
                 echo "Running $exe"
                 "$exe"
-              else
-                echo "No test executables found matching test/tester_*"
+                found=1
               fi
             done
+          done
+
+          if [ "$found" -eq 0 ]; then
+            echo "No test executables found matching patterns: ${patterns[*]}"
+          fi
 
   lint:
     name: Lint - ${{ matrix.project }}
