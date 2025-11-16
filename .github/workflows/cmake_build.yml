@@ -18,16 +18,16 @@ jobs:
     strategy:
       matrix:
         project:
-          # - simple_vm
-          # - binary_max_heap
-          # - indirect_sorting
-          # - arithmetic_types
-          # - bitset_container
-          # - chaining_hash_table
-          # - raii_temp_files
-          # - arithmetic_ast
+          - simple_vm
+          - binary_max_heap
+          - indirect_sorting
+          - arithmetic_types
+          - bitset_container
+          - chaining_hash_table
+          - raii_temp_files
+          - arithmetic_ast
           - pooled_list_allocator
-          # - thread_safe_multimap
+          - thread_safe_multimap
 
     steps:
       - name: Checkout repository
@@ -79,16 +79,16 @@ jobs:
     strategy:
       matrix:
         project:
-          # - simple_vm
-          # - binary_max_heap
-          # - indirect_sorting
-          # - arithmetic_types
-          # - bitset_container
-          # - chaining_hash_table
-          # - raii_temp_files
-          # - arithmetic_ast
+          - simple_vm
+          - binary_max_heap
+          - indirect_sorting
+          - arithmetic_types
+          - bitset_container
+          - chaining_hash_table
+          - raii_temp_files
+          - arithmetic_ast
           - pooled_list_allocator
-          # - thread_safe_multimap
+          - thread_safe_multimap
 
     steps:
       - name: Checkout repository
