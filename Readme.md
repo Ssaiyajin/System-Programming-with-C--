@@ -77,8 +77,8 @@ ls test
 Common test naming patterns supported by CI:
 
 * `test`
-* `test/tester_*`
-* `test/tester`
+* `./test/tester_*`
+* `./test/tester`
 
 If your project builds multiple tester binaries (e.g. `tester_a`, `tester_b`), run them all or use the provided CI pattern logic.
 
@@ -160,15 +160,6 @@ find build -type f -executable -name "tester*"
 
 Several examples intentionally demonstrate code patterns that trigger static analysis warnings for educational purposes. Suppress with `// NOLINT` where appropriate or update `.clang-tidy` to relax specific checks.
 
-### Character-range static analysis issues
-
-If clang-tidy warns about "logical expression is always false" when using char ranges, prefer small predicate helper functions:
-
-```cpp
-bool isIntReg(char c);
-bool isFloatReg(char c);
-```
-
 ---
 
 ## 🤖 GitHub Actions (CI) Integration
@@ -191,25 +182,6 @@ This avoids needing a global `ctest` setup and allows each subproject to maintai
 
 ---
 
-## 🤝 Contributing
+### Author ✨
 
-* Create feature/topic branches
-* Follow the repository's clang-format rules before committing
-* Add or extend tests when fixing bugs or adding features
-* Open PRs against `main` with a clear description and test coverage
-
----
-
-## 📝 License
-
-(Replace with your license of choice — e.g. MIT)
-
----
-
-If you'd like, I can also:
-
-* add a **badges** block (build, lint, license)
-* create a **CONTRIBUTING.md** and **GitHub Actions** workflow YAML for you
-* add per-project `README.md` stubs that show how to build and run each project
-
-Tell me which of the above you want next.
+Nihar Sawant – aspiring DevOps & Software Engineer with interest in machine learning, cloud, and automation.
