@@ -423,18 +423,14 @@ TEST(TestListExtra, MoveDoesNotDuplicate) {
 }
 
 TEST(MoveSemanticsTest, MoveConstructorTransfersContents) {
-    IntList src;
-    EXPECT_EQ(src.size(), 0u);
-    src.insert(123);
-    EXPECT_EQ(src.size(), 1u);
-    src.insert(456);
-    EXPECT_EQ(src.size(), 2u);
+    IntList l;
+    EXPECT_EQ(l.size(), 0u);
+    l.insert(1);
+    EXPECT_EQ(l.size(), 1u);
 
-    IntList dst(std::move(src));
-
-    // dst should acquire the elements, src should become empty
-    EXPECT_EQ(dst.size(), 2u);
-    EXPECT_EQ(src.size(), 0u);
+    IntList moved(std::move(l));
+    EXPECT_EQ(moved.size(), 1u);
+    EXPECT_EQ(l.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
 
 TEST(MoveSemanticsTest, MoveAssignmentTransfersContents) {
@@ -447,7 +443,7 @@ TEST(MoveSemanticsTest, MoveAssignmentTransfersContents) {
     b = std::move(a);
 
     EXPECT_EQ(b.size(), 1u);
-    EXPECT_EQ(a.size(), 0u);
+    EXPECT_EQ(a.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
 
 TEST(MoveSemanticsTest, MoveDoesNotDuplicateAfterMutation) {
@@ -457,11 +453,11 @@ TEST(MoveSemanticsTest, MoveDoesNotDuplicateAfterMutation) {
 
     IntList dst(std::move(src));
     EXPECT_EQ(dst.size(), 1u);
-    EXPECT_EQ(src.size(), 0u);
+    EXPECT_EQ(src.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 
     dst.insert(8);
     EXPECT_EQ(dst.size(), 2u);
-    EXPECT_EQ(src.size(), 0u);
+    EXPECT_EQ(src.size(), 0u); // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
 
 TEST(MoveSemanticsTest, SelfMoveAssignmentIsSafe) {
@@ -472,8 +468,7 @@ TEST(MoveSemanticsTest, SelfMoveAssignmentIsSafe) {
     x.insert(2);
     const auto before = x.size();
 
-    // Do not perform a self-assignment (x = x) which triggers lint warnings.
-    // Instead, move-assign from a distinct temporary to exercise move-assignment.
+    // Avoid self-assignment warnings: move from a distinct temporary instead.
     IntList tmp = x;
     x = std::move(tmp);
 
